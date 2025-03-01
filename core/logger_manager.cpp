@@ -1,0 +1,388 @@
+/*
+ * MIT License
+ * 
+ * Copyright (c) 2024 g2wfw
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+
+#include "logger_manager.h"
+#include "jni_provider.h"
+#include "common.h"
+#include <spdlog/sinks/android_sink.h>
+#include <spdlog/sinks/sink.h>
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/async.h>
+#include <libgen.h>
+#include <jni.h>
+#include <cstdint>
+
+#define QBDI_FPR_GET(state, i) (reinterpret_cast<const __uint128_t *>(state)[i])
+
+static uint64_t get_timestamp_ms() {
+    struct timeval tv;
+    gettimeofday(&tv, nullptr);
+
+    return (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
+}
+
+static std::string get_files_dir(JNIEnv *env) {
+
+    jclass activityThreadClass = env->FindClass("android/app/ActivityThread");
+    jmethodID currentActivityThreadMethod = env->GetStaticMethodID(activityThreadClass,
+                                                                   "currentActivityThread",
+                                                                   "()Landroid/app/ActivityThread;");
+    jobject activityThread = env->CallStaticObjectMethod(activityThreadClass,
+                                                         currentActivityThreadMethod);
+
+    jmethodID getApplicationMethod = env->GetMethodID(activityThreadClass,
+                                                      "getApplication",
+                                                      "()Landroid/app/Application;");
+    jobject context = env->CallObjectMethod(activityThread, getApplicationMethod);
+
+
+    jclass contextClass = env->FindClass("android/content/Context");
+    jmethodID getFilesDirMethod = env->GetMethodID(contextClass, "getFilesDir", "()Ljava/io/File;");
+    jobject filesDir = env->CallObjectMethod(context, getFilesDirMethod);
+
+    jclass fileClass = env->FindClass("java/io/File");
+    jmethodID getAbsolutePathMethod = env->GetMethodID(fileClass, "getAbsolutePath",
+                                                       "()Ljava/lang/String;");
+    jstring absPath = (jstring) env->CallObjectMethod(filesDir, getAbsolutePathMethod);
+
+    const char *absPathChars = env->GetStringUTFChars(absPath, 0);
+    std::string result(absPathChars);
+    env->ReleaseStringUTFChars(absPath, absPathChars);
+
+    return result;
+}
+
+void LoggerManager::set_enable_to_logcat(bool enable) {
+    if (enable && this->logcat != nullptr) {
+        return;
+    }
+    if (!enable && this->logcat != nullptr) {
+        this->logcat.reset();
+        return;
+    }
+    if (enable) {
+        this->logcat = spdlog::android_logger_mt("logcat", "qbdi");
+        logcat->set_pattern("[%H:%M:%S.%e] %v");
+    }
+}
+
+void LoggerManager::set_enable_to_file(bool enable) {
+    if (enable) {
+        auto env = smjni::jni_provider::get_jni();
+        auto file_dir = get_files_dir(env);
+        std::string trace_log_dir = file_dir + "/itrace/";
+        if (!check_and_mkdir(trace_log_dir)) {
+            LOGE("mkdir failed %s", trace_log_dir.c_str());
+            return;
+        }
+        if (trace_log_file.empty()) {
+            trace_log_base = fmt::format("{}{}_{:x}_{:x}/", trace_log_dir,
+                                         basename(this->module_name.c_str()), module_range.base,
+                                         get_timestamp_ms());
+            if (!check_and_mkdir(trace_log_base)) {
+                LOGE("mkdir failed %s", trace_log_base.c_str());
+            }
+        }
+        if (this->file_log == nullptr) {
+            spdlog::init_thread_pool(0x10000, 4);
+            this->file_log = spdlog::create_async<spdlog::sinks::basic_file_sink_mt>("itace",
+                                                                                     trace_log_base +
+                                                                                     "/itrace.log",
+                                                                                     false);
+            this->file_log->set_pattern("[%H:%M:%S.%e] %v");
+            spdlog::flush_every(std::chrono::seconds(20));
+        }
+    } else {
+        if (this->file_log != nullptr) {
+            this->file_log.reset();
+        }
+    }
+}
+
+bool LoggerManager::check_and_mkdir(std::string &path) {
+    struct stat info;
+    if (stat(path.c_str(), &info) == 0) {
+        if (info.st_mode & S_IFDIR) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    if (mkdir(path.c_str(), 0755) == 0) {
+        return true;
+    } else {
+        return false;
+    }
+    return true;
+}
+
+static inline std::string ltrim(const std::string &str) {
+    size_t start = str.find_first_not_of(" \t\n\r\f\v");
+    return (start == std::string::npos) ? "" : str.substr(start);
+}
+
+static inline std::string rtrim(const std::string &str) {
+    size_t end = str.find_last_not_of(" \t\n\r\f\v");
+    return (end == std::string::npos) ? "" : str.substr(0, end + 1);
+}
+
+static inline std::string trim(const std::string &str) {
+    return rtrim(ltrim(str));
+}
+
+void LoggerManager::write_trace_info(const inst_trace_info_t *info,
+                                     const QBDI::InstAnalysis *instAnalysis,
+                                     std::vector<QBDI::MemoryAccess> &memoryAccesses) {
+    if (this->logcat == nullptr && this->file_log == nullptr) {
+        return;
+    }
+    std::string line = (fmt::format("|{:#x}", info->pc));
+    //[00:31:57.995]|0x76a5af6488|0x13214c| lsl w15, w15, #3|[W15= 0x8 ==> 0x40]
+    line.append(fmt::format("|{:#x}|", info->pc - module_range.base));
+    std::string dis_str = instAnalysis->disassembly;
+
+    dis_str = trim(dis_str);
+    line.append(dis_str);
+    std::string reg_info;
+    format_register_info(reg_info, info, instAnalysis);
+    line.append("|");
+    if (!reg_info.empty()) {
+
+        line.append(reg_info);
+    }
+    line.append("|");
+    std::string call_info;
+    format_call_info(call_info, info, instAnalysis);
+    if (!call_info.empty()) {
+        line.append(call_info);
+    }
+    std::string memory_access_info;
+    format_access_info(memory_access_info, memoryAccesses);
+    line.append("|");
+    if (!memory_access_info.empty()) {
+        line.append(memory_access_info);
+    }
+    write_info(line);
+}
+
+static inline bool is_visible_char(char c) {
+    return std::isprint(static_cast<unsigned char>(c));
+}
+
+void LoggerManager::format_access_info(std::string &result,
+                                       std::vector<QBDI::MemoryAccess> &memoryAccesses) {
+    if (memoryAccesses.empty()) {
+        return;
+    }
+    std::vector<std::string> ma_info;
+    for (const auto &ma: memoryAccesses) {
+        if (is_address_in_module_range(ma.accessAddress)) {
+            if (ma.type == QBDI::MemoryAccessType::MEMORY_READ) {
+                if (ma.size == 1 && isprint((int) ma.value)) {
+                    ma_info.push_back(
+                            fmt::format("r o:{:#x}=>{:#x} {}", ma.accessAddress - module_range.base,
+                                        ma.value,
+                                        (char) ma.value));
+                } else {
+                    ma_info.push_back(
+                            fmt::format("r o:{:#x}=>{:#x}", ma.accessAddress - module_range.base,
+                                        ma.value));
+                }
+            } else {
+                if (ma.size == 1 && isprint((int) ma.value)) {
+                    ma_info.push_back(
+                            fmt::format("w o:{:#x}=>{:#x} {}", ma.accessAddress - module_range.base,
+                                        ma.value,
+                                        (char) ma.value));
+                } else {
+                    ma_info.push_back(
+                            fmt::format("w o:{:#x}=>{:#x}", ma.accessAddress - module_range.base,
+                                        ma.value));
+                }
+            }
+        } else {
+            if (ma.type == QBDI::MemoryAccessType::MEMORY_READ) {
+                if (ma.size == 1 && isprint((int) ma.value)) {
+                    ma_info.push_back(fmt::format("r m:{:#x}=>{:#x} {}", ma.accessAddress, ma.value,
+                                                  (char) ma.value));
+                } else {
+                    ma_info.push_back(fmt::format("r m:{:#x}=>{:#x}", ma.accessAddress, ma.value));
+                }
+            } else {
+                if (ma.size == 1 && isprint((int) ma.value)) {
+                    ma_info.push_back(fmt::format("w m:{:#x}=>{:#x} {}", ma.accessAddress, ma.value,
+                                                  (char) ma.value));
+                } else {
+                    ma_info.push_back(fmt::format("w m:{:#x}=>{:#x}", ma.accessAddress, ma.value));
+                }
+            }
+        }
+    }
+
+    if (ma_info.empty()) {
+        return;
+    }
+    result = join(ma_info, ",");
+}
+
+void LoggerManager::write_info(std::string &line) const {
+    if (this->logcat != nullptr) {
+        this->logcat->info(line);
+    }
+    if (this->file_log != nullptr) {
+        this->file_log->info(line);
+    }
+}
+
+void LoggerManager::format_register_info(std::string &result, const inst_trace_info_t *info,
+                                         const QBDI::InstAnalysis *inst) {
+    //[],read:[]
+    std::vector<std::string> cur_regs_vector;
+    std::vector<std::string> read_regs_vector;
+    auto &post_fpr_state = info->post_status.fpr_state;
+    auto &pre_fpr_state = info->pre_status.fpr_state;
+    auto &post_gpr_state = info->post_status.gpr_state;
+    auto &pre_gpr_state = info->pre_status.gpr_state;
+    for (int i = 0; i < inst->numOperands; ++i) {
+        auto operand = inst->operands[i];
+        if (operand.regAccess == QBDI::RegisterAccessType::REGISTER_READ
+            || operand.regAccess == QBDI::RegisterAccessType::REGISTER_READ_WRITE
+            || operand.regAccess == QBDI::RegisterAccessType::REGISTER_WRITE
+                ) {
+            if (operand.regName == nullptr) {
+                continue;
+            }
+            if (operand.regCtxIdx < 0) {
+                continue;
+            }
+#ifdef __arm__
+
+            if (operand.type == QBDI::OPERAND_FPR) {
+                switch (operand.size) {
+                    case 4: {
+                        if (operand.regAccess == QBDI::REGISTER_READ ||
+                            operand.regAccess == QBDI::REGISTER_READ_WRITE) {
+                            read_regs_vector.emplace_back(
+                                    fmt::format("{}= {:.2a}", operand.regName,
+                                                pre_fpr_state.vreg.s[operand.regCtxIdx]));
+                        }
+                        cur_regs_vector.emplace_back(
+                                fmt::format("{}= {:.2a}", operand.regName,
+                                            post_fpr_state.vreg.s[operand.regCtxIdx]));
+                    }
+                        break;
+                    case 8: {
+                        if (operand.regAccess == QBDI::REGISTER_READ ||
+                            operand.regAccess == QBDI::REGISTER_READ_WRITE) {
+                            read_regs_vector.emplace_back(
+                                    fmt::format("{}= {:.2a}", operand.regName,
+                                                pre_fpr_state.vreg.d[operand.regCtxIdx]));
+                        }
+                        cur_regs_vector.emplace_back(
+                                fmt::format("{}= {:.2a}", operand.regName,
+                                            post_fpr_state.vreg.d[operand.regCtxIdx]));
+                    }
+                        break;
+                    case 16: {
+                        //todo 128bit num read on arm32
+                        if (operand.regAccess == QBDI::REGISTER_READ ||
+                            operand.regAccess == QBDI::REGISTER_READ_WRITE) {
+                            cur_regs_vector.emplace_back(
+                                    fmt::format("{}= {:#x}", operand.regName,
+                                                (uint64_t) pre_fpr_state.vreg.q[operand.regCtxIdx]));
+                        }
+                        cur_regs_vector.emplace_back(
+                                fmt::format("{}= {:#x}", operand.regName,
+                                            (uint64_t) post_fpr_state.vreg.q[operand.regCtxIdx]));
+                    }
+                        break;
+                    default:
+                        LOGE("fail to read %s %hx", operand.regName, operand.regCtxIdx);
+                        break;
+                }
+            } else if (operand.type == QBDI::OPERAND_GPR) {
+                cur_regs_vector.emplace_back(
+                        fmt::format("{}= {:#x}", operand.regName,
+                                    QBDI_GPR_GET(&post_gpr_state, operand.regCtxIdx)));
+            }
+#else
+#define QBDI_FPR_GET(state, i) (reinterpret_cast<const __uint128_t *>(state)[i])
+            if (operand.type == QBDI::OPERAND_FPR) {
+                if (operand.regAccess == QBDI::REGISTER_READ ||
+                    operand.regAccess == QBDI::REGISTER_READ_WRITE) {
+                    read_regs_vector.emplace_back(
+                            fmt::format("{}= {:#x}", operand.regName,
+                                        QBDI_FPR_GET(&pre_fpr_state, operand.regCtxIdx)));
+                }
+                cur_regs_vector.emplace_back(
+                        fmt::format("{}= {:#x}", operand.regName,
+                                    QBDI_FPR_GET(&post_fpr_state, operand.regCtxIdx)));
+            } else if (operand.type == QBDI::OPERAND_GPR) {
+                if (operand.regAccess == QBDI::REGISTER_READ ||
+                    operand.regAccess == QBDI::REGISTER_READ_WRITE) {
+                    read_regs_vector.emplace_back(
+                            fmt::format("{}= {:#x}", operand.regName,
+                                        QBDI_GPR_GET(&pre_gpr_state, operand.regCtxIdx)));
+                }
+                cur_regs_vector.emplace_back(
+                        fmt::format("{}= {:#x}", operand.regName,
+                                    QBDI_GPR_GET(&post_gpr_state, operand.regCtxIdx)));
+            }
+#endif
+
+
+        }
+    }
+    if (!cur_regs_vector.empty()) {
+        result.append(join(cur_regs_vector, ","));
+
+    }
+    if (!read_regs_vector.empty()) {
+        result.append(",");
+        result.append(join(read_regs_vector, ","));
+    }
+    if (result.empty()) {
+        result = "";
+    }
+}
+
+void LoggerManager::format_call_info(std::string &result, const inst_trace_info_t *info,
+                                     const QBDI::InstAnalysis *instAnalysis) {
+    if (info->fun_call == nullptr) {
+        result = " ";
+        return;
+    }
+    auto call = info->fun_call;
+    // lib_name:fun_name args ret
+    result.append(call->call_module_name);
+    result.append(":");
+    result.append(call->fun_name);
+    result.append(" args:");
+    result.append(join(call->args, ","));
+    result.append(" ");
+    result.append(call->ret_value);
+}
+
+

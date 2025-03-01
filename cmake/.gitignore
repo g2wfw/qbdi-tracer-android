@@ -1,0 +1,5 @@
+# Project exclude paths
+/cmake-build-debug/
+/.idea/
+CMakeLists.txt
+/vcpkg/
