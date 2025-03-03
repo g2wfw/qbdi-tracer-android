@@ -30,24 +30,41 @@ MemoryManager* MemoryManager::get_instance() {
     return &manager;
 }
 
-bool MemoryManager::add_memory(uintptr_t addr, size_t size) {
+void MemoryManager::set_dump_path(const std::string& path) {
+    this->dump_path = path;
+    this->memory_dump_file.open(path, std::ios::out | std::ios::trunc | std::ios::binary);
+    if (this->memory_dump_file.is_open()) {
+        LOGI("Memory dump file opened.");
+    }
+}
+bool MemoryManager::add_memory(const uintptr_t addr, const size_t size) {
     auto end = addr + size;
     auto start = addr;
     if (is_in_memory(addr) || is_in_memory(end)) {
         return false;
     }
-    this->memory_map.emplace(start, end);
+    this->memory_infos.emplace_back(this->memory_index.load(), start, end);
+    this->memory_index.fetch_add(1);
     return true;
 }
 
 void MemoryManager::clear() {
-    this->memory_map.clear();
+    this->memory_infos.clear();
+    this->memory_dump_file.flush();
+    this->memory_dump_file.close();
 }
+size_t MemoryManager::write_memory_buffer(void* addr, size_t len) {
+    // write hexdump to file
+    if (!this->memory_dump_file.is_open()) {
+        return 0;
+    }
 
-bool MemoryManager::remove_memory(uintptr_t addr) {
-    for (auto it = memory_map.begin(); it != memory_map.end();) {
-        if (it->first == addr) {
-            it = memory_map.erase(it);
+
+}
+bool MemoryManager::remove_memory(const uintptr_t addr) {
+    for (auto it = this->memory_infos.begin(); it != this->memory_infos.end();) {
+        if (it->start == addr) {
+            it = memory_infos.erase(it);
             return true;
         }
         ++it;
@@ -59,8 +76,8 @@ bool MemoryManager::is_in_memory(uintptr_t addr) {
     if (addr == 0) {
         return false;
     }
-    return std::any_of(this->memory_map.begin(), this->memory_map.end(), [&](const auto& range) {
-        if (addr >= range.first && addr <= range.second) {
+    return std::any_of(this->memory_infos.begin(), this->memory_infos.end(), [&](const auto& memory_info) {
+        if (addr >= memory_info.start && addr <= memory_info.end) {
             return true;
         }
         return false;
@@ -70,10 +87,10 @@ bool MemoryManager::is_in_memory(uintptr_t addr) {
 std::tuple<uintptr_t, size_t> MemoryManager::get_memory_offset(uintptr_t addr) {
     size_t offset = -1;
     uintptr_t start = 0;
-    std::any_of(this->memory_map.begin(), this->memory_map.end(), [&](const auto& range) {
-        if (addr >= range.first && addr <= range.second) {
-            offset = addr - range.first;
-            start = range.first;
+    std::any_of(this->memory_infos.begin(), this->memory_infos.end(), [&](const auto& memory_info) {
+        if (addr >= memory_info.start && addr <= memory_info.end) {
+            offset = addr - memory_info.start;
+            start = memory_info.start;
             return true;
         }
         return false;

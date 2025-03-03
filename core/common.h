@@ -26,10 +26,10 @@
 #ifndef QBDI_TRACER_COMMON_H
 #define QBDI_TRACER_COMMON_H
 
-#include <sstream>
-#include <cstdint>
-#include <android/log.h>
 #include <QBDI.h>
+#include <android/log.h>
+#include <cstdint>
+#include <sstream>
 
 #define LOG_TAG "QBDI"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -71,6 +71,13 @@ typedef struct module_export_details {
     const char* name;
 } module_export_details_t;
 
+typedef struct memory_info {
+    uint64_t memory_index;
+    uintptr_t start;
+    uintptr_t end;
+    memory_info(uint64_t memory_index, uintptr_t start, uintptr_t end) : memory_index(memory_index), start(start), end(end) {}
+    memory_info() = default;
+} memory_info_t;
 
 typedef struct inst_trace_info {
     uintptr_t pc = 0;
@@ -88,26 +95,25 @@ static inline std::string join(const Container& v, const char* delim) {
     }
     std::ostringstream os;
     os << "[";
-    std::copy(v.begin(), std::prev(v.end()),
-              std::ostream_iterator<typename Container::value_type>(os, delim));
+    std::copy(v.begin(), std::prev(v.end()), std::ostream_iterator<typename Container::value_type>(os, delim));
     os << *(v.rbegin());
     os << "]";
     return os.str();
 }
 
 
-#define REGISTER_HANDLER(HANDLER_MAP, FUNC_NAME, HANDLER_BODY) \
-    do { \
-        auto addr = gum_module_find_export_by_name(module, #FUNC_NAME); \
-         if (addr) { \
-            std::function<void(inst_trace_info_t*)> handler = [](inst_trace_info_t* trace_info) HANDLER_BODY; \
-            HANDLER_MAP.insert({addr, {#FUNC_NAME, handler}}); \
-        } \
+#define REGISTER_HANDLER(HANDLER_MAP, FUNC_NAME, HANDLER_BODY)                                                 \
+    do {                                                                                                       \
+        auto addr = gum_module_find_export_by_name(module, #FUNC_NAME);                                        \
+        if (addr) {                                                                                            \
+            std::function<void(inst_trace_info_t*)> handler = [](inst_trace_info_t * trace_info) HANDLER_BODY; \
+            HANDLER_MAP.insert({addr, {#FUNC_NAME, handler}});                                                 \
+        }                                                                                                      \
     } while (0)
 
 
-#define DISALLOW_COPY_AND_ASSIGN(TypeName)       \
-    TypeName(const TypeName&) = delete;          \
+#define DISALLOW_COPY_AND_ASSIGN(TypeName) \
+    TypeName(const TypeName&) = delete;    \
     void operator=(const TypeName&) = delete
 
-#endif //QBDI_TRACER_COMMON_H
+#endif  //QBDI_TRACER_COMMON_H

@@ -26,14 +26,18 @@
 #ifndef QBDI_TRACER_MEMORY_MANAGER_H
 #define QBDI_TRACER_MEMORY_MANAGER_H
 
+#include <atomic>
+#include <fstream>
+#include <vector>
 #include "common.h"
-#include <unordered_map>
 
 class MemoryManager {
 public:
     static MemoryManager* get_instance();
 
     ~MemoryManager() = default;
+
+    void set_dump_path(const std::string& path);
 
     bool add_memory(uintptr_t addr, size_t size);
 
@@ -45,15 +49,19 @@ public:
 
     std::tuple<uintptr_t, size_t> get_memory_offset(uintptr_t addr);
 
+
 private:
     MemoryManager() = default;
 
+    size_t write_memory_buffer(void* addr, size_t len);
+
 private:
-    bool dump_to_file = false;
-    /*key:memory start ,value memory end*/
-    std::unordered_map<uintptr_t, uintptr_t> memory_map;
+    std::ofstream memory_dump_file;
+    std::atomic_uint64_t memory_index = 0;
+    std::string dump_path;
+    std::vector<memory_info_t> memory_infos;
     DISALLOW_COPY_AND_ASSIGN(MemoryManager);
 };
 
 
-#endif //QBDI_TRACER_MEMORY_MANAGER_H
+#endif  //QBDI_TRACER_MEMORY_MANAGER_H

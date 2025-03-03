@@ -5,37 +5,37 @@
 #ifndef ITRACE_NATIVE_DISPATCH_BASE_H
 #define ITRACE_NATIVE_DISPATCH_BASE_H
 
-#include <string>
-#include <cstdint>
-#include <frida-gum.h>
-#include <unordered_map>
 #include <QBDI.h>
+#include <frida-gum.h>
+#include <cstdint>
+#include <string>
+#include <unordered_map>
 #include "../common.h"
 
-gboolean dispatch_export_func(const GumExportDetails *details,
-                              gpointer user_data);
+gboolean dispatch_export_func(const GumExportDetails* details, gpointer user_data);
 
-gboolean dispatch_symbol_func(const GumSymbolDetails *details,
-                              gpointer user_data);
-
+gboolean dispatch_symbol_func(const GumSymbolDetails* details, gpointer user_data);
 
 class DispatchBase {
 public:
-    bool is_module_address(uintptr_t address) const;
+    virtual ~DispatchBase() = default;
 
-    void add_export_info(const GumExportDetails *details);
+    [[nodiscard]] bool is_module_address(uintptr_t address) const;
 
-    void add_symbol_info(const GumSymbolDetails *details);
+    void add_export_info(const GumExportDetails* details);
+
+    void add_symbol_info(const GumSymbolDetails* details);
 
     std::string get_address_symbol(uintptr_t address);
 
-    virtual bool dispatch_args(inst_trace_info_t *info) = 0;
+    virtual bool dispatch_args(inst_trace_info_t* info) = 0;
 
-    virtual bool dispatch_ret(inst_trace_info_t *info, const QBDI::GPRState *ret_status) = 0;
+    virtual bool dispatch_ret(inst_trace_info_t* info, const QBDI::GPRState* ret_status) = 0;
 
 protected:
     std::unordered_map<uintptr_t, std::string> symbol_info;
-    module_range_t module_range;
+    module_range_t module_range = {};
+
 protected:
     /**
       * Get the value of an argument register.
@@ -47,19 +47,17 @@ protected:
       * @param arg_index The index of the argument register whose value needs to be retrieved.
       * @return The value of the specified argument register, returned as a uintptr_t which can hold any pointer type.
       */
-    static uintptr_t get_arg_register_value(trace_vm_status_t *instCall, uint32_t arg_index);
+    static uintptr_t get_arg_register_value(trace_vm_status_t* instCall, uint32_t arg_index);
 
-    static uintptr_t get_ret_register_value(const QBDI::GPRState *state, uint32_t arg_index);
+    static uintptr_t get_ret_register_value(const QBDI::GPRState* state, uint32_t arg_index);
 
-    static const char *read_string_from_address(uintptr_t address);
+    static const char* read_string_from_address(uintptr_t address);
 
     static std::string read_buffer_hexdump_from_address(uintptr_t address, size_t size = 16);
 
-    static bool add_common_reg_values(inst_trace_info_t *info);
+    static bool add_common_reg_values(inst_trace_info_t* info);
 
-    static bool add_common_return_value(inst_trace_info_t *info, const QBDI::GPRState *state);
-
+    static bool add_common_return_value(inst_trace_info_t* info, const QBDI::GPRState* state);
 };
 
-
-#endif //ITRACE_NATIVE_DISPATCH_BASE_H
+#endif  //ITRACE_NATIVE_DISPATCH_BASE_H

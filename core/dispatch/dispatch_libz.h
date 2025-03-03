@@ -22,25 +22,23 @@
  * THE SOFTWARE.
  */
 
-
 #ifndef QBDI_TRACER_DISPATCH_LIBZ_H
 #define QBDI_TRACER_DISPATCH_LIBZ_H
 
 #include "dispatch_base.h"
 
-class DispatchLibz : public DispatchBase {
+class DispatchLibz final : public DispatchBase {
 public:
-    static DispatchLibz *get_instance();
+    static DispatchLibz* get_instance();
 
-    ~DispatchLibz()=default;
+    ~DispatchLibz() override = default;
 
-    bool dispatch_args(inst_trace_info_t *info) override;
+    bool dispatch_args(inst_trace_info_t* info) override;
 
-    bool dispatch_ret(inst_trace_info_t *info, const QBDI::GPRState *ret_status) override;
+    bool dispatch_ret(inst_trace_info_t* info, const QBDI::GPRState* ret_status) override;
 
 private:
     DispatchLibz();
 };
 
-
-#endif //QBDI_TRACER_DISPATCH_LIBZ_H
+#endif  //QBDI_TRACER_DISPATCH_LIBZ_H

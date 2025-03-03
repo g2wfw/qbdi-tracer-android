@@ -7,12 +7,11 @@
 
 #include "dispatch_base.h"
 
-class DispatchLibc : public DispatchBase
-{
+class DispatchLibc final : public DispatchBase {
 public:
     static DispatchLibc* get_instance();
 
-    ~DispatchLibc() = default;
+    ~DispatchLibc() override = default;
 
     bool dispatch_args(inst_trace_info_t* info) override;
 
@@ -25,5 +24,4 @@ private:
     DispatchLibc();
 };
 
-
-#endif //ITRACE_NATIVE_DISPATCH_LIBC_H
+#endif  //ITRACE_NATIVE_DISPATCH_LIBC_H
