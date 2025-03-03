@@ -1,11 +1,11 @@
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.25)
 if (NOT DEFINED CMAKE_ANDROID_NDK)
     if (EXISTS ${CMAKE_CURRENT_LIST_DIR}/cmake)
         include(cmake/android.cmake)
         if (WIN32)
             init_android_ndk("D:/Android/sdk/ndk/27.0.12077973")
         else ()
-            init_android_ndk("/mnt/d/ndk-r16b")
+            init_android_ndk("/mnt/d/linux-ndk/android-ndk-r25c")
         endif ()
     else ()
         message(FATAL_ERROR "can not find cmake tools dir,please clone cmake tools")
@@ -14,9 +14,9 @@ if (NOT DEFINED CMAKE_ANDROID_NDK)
     # toolchain_name must in [gcc、clang]
     # stl_type must in [c++_static、c++_shared、none、system]
     if (DEFINED target_abi)
-        init_android_build(${target_abi} 21 "clang" "c++_static")
+        init_android_build(${target_abi} 24 "clang" "c++_static")
     else ()
-        init_android_build("armeabi-v7a" 21 "clang" "c++_static")
+        init_android_build("armeabi-v7a" 24 "clang" "c++_static")
     endif ()
 endif ()
 
@@ -78,6 +78,8 @@ add_library(qbdi_tracer SHARED
         core/dispatch/dispatch_syscall.cpp
         core/dispatch/dispatch_libz.cpp
         core/dispatch/dispatch_libz.h
+        core/memory_manager.cpp
+        core/memory_manager.h
 )
 
-target_link_libraries(qbdi_tracer PRIVATE ${QBDI_LIB_PATH} ${FRIDA_GUM_LIB_PATH} smjni log)
+target_link_libraries(qbdi_tracer PRIVATE ${QBDI_LIB_PATH} ${FRIDA_GUM_LIB_PATH} smjni log )

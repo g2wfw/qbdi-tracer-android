@@ -57,9 +57,9 @@ private:
     void format_call_info(std::string &result, const inst_trace_info_t *info,
                           const QBDI::InstAnalysis *instAnalysis);
 
-    void format_access_info(std::string &result, std::vector<QBDI::MemoryAccess> &memoryAccesses);
+    void format_access_info(std::string &result, std::vector<QBDI::MemoryAccess> &memoryAccesses) const;
 
-    inline bool is_address_in_module_range(uintptr_t addr) {
+    [[nodiscard]] inline bool is_address_in_module_range(uintptr_t addr) const {
         return addr >= this->module_range.base && addr < this->module_range.end;
     };
 

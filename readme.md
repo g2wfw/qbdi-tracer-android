@@ -13,11 +13,12 @@ in functionality but faster than Frida.Stalker.
 
 ## Build Environment
 
-* [Android NDK 26.2.11394342 and Upper](https://developer.android.com/ndk/downloads)
+* [Android NDK r25c and Upper](https://developer.android.com/ndk/downloads)
+* Android API 24 and Upper
 
 ## Development Environment
 
-* [Android NDK 26.2.11394342](https://developer.android.com/ndk/downloads)
+* [Android NDK r25c](https://developer.android.com/ndk/downloads)
 * [CMake 3.22](https://cmake.org/download/)
 * [Clion](https://www.jetbrains.com/clion/)
 

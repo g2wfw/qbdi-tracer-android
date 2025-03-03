@@ -23,33 +23,37 @@
  */
 
 
-#ifndef QBDI_TRACER_INSTRUCTION_REGISTER_UTILS_H
-#define QBDI_TRACER_INSTRUCTION_REGISTER_UTILS_H
+#ifndef QBDI_TRACER_MEMORY_MANAGER_H
+#define QBDI_TRACER_MEMORY_MANAGER_H
 
+#include "common.h"
+#include <unordered_map>
 
-#include <QBDI.h>
-#include <frida-gum.h>
-
-class InstructionRegisterUtils {
+class MemoryManager {
 public:
-    /**
-     * copy qbdi regs to frida regs
-     * @param status qbdi regs
-     * @param ic frida regs
-     */
-    static void qbdi_to_frida(QBDI::GPRState* status, GumInvocationContext* ic);
+    static MemoryManager* get_instance();
 
-    /**
-     * copy frida regs to qbdi regs
-     * has bugs app will crash
-     * todo fix bugs
-     * @param ic frida regs
-     * @param status qbdi regs
-     */
-    static void frida_to_qbdi(GumInvocationContext* ic, QBDI::GPRState* status);
+    ~MemoryManager() = default;
 
+    bool add_memory(uintptr_t addr, size_t size);
 
+    void clear();
+
+    bool remove_memory(uintptr_t addr);
+
+    bool is_in_memory(uintptr_t addr);
+
+    std::tuple<uintptr_t, size_t> get_memory_offset(uintptr_t addr);
+
+private:
+    MemoryManager() = default;
+
+private:
+    bool dump_to_file = false;
+    /*key:memory start ,value memory end*/
+    std::unordered_map<uintptr_t, uintptr_t> memory_map;
+    DISALLOW_COPY_AND_ASSIGN(MemoryManager);
 };
 
 
-#endif //QBDI_TRACER_INSTRUCTION_REGISTER_UTILS_H
+#endif //QBDI_TRACER_MEMORY_MANAGER_H

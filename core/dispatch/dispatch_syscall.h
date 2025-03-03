@@ -19,6 +19,7 @@ public:
 
 private:
     DispatchSyscall();
+    bool record_memory_info(inst_trace_info_t* info, const QBDI::GPRState* ret_status);
 };
 
 

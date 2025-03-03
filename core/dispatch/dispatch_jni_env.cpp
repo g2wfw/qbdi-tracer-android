@@ -176,7 +176,7 @@ void DispatchJNIEnv::dispatch_env(std::string name, inst_trace_info_t *trace_inf
             }},
             {"Call",                    [&]() {
                 if (starts_with(name, "CallStatic")) {
-                    trace_info->fun_call->args.push_back(fmt::format("object={}",
+                    trace_info->fun_call->args.push_back(fmt::format("class={}",
                                                                      get_jni_class_or_java_class_name(
                                                                              env, (jclass) arg0)));
                     trace_info->fun_call->args.push_back(fmt::format("method={}",

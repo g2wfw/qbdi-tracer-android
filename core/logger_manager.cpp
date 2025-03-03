@@ -192,7 +192,7 @@ static inline bool is_visible_char(char c) {
 }
 
 void LoggerManager::format_access_info(std::string &result,
-                                       std::vector<QBDI::MemoryAccess> &memoryAccesses) {
+                                       std::vector<QBDI::MemoryAccess> &memoryAccesses) const {
     if (memoryAccesses.empty()) {
         return;
     }

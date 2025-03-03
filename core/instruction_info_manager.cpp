@@ -25,11 +25,13 @@
 
 #include "instruction_info_manager.h"
 
-void InstructionInfoManager::set_enable_to_logcat(bool enable) {
+void InstructionInfoManager::set_enable_to_logcat(bool enable) const
+{
     this->logger->set_enable_to_logcat(enable);
 }
 
-void InstructionInfoManager::set_enable_to_file(bool enable) {
+void InstructionInfoManager::set_enable_to_file(bool enable) const
+{
     this->logger->set_enable_to_file(enable);
 }
 

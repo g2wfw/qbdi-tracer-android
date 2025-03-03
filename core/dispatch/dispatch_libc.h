@@ -7,17 +7,21 @@
 
 #include "dispatch_base.h"
 
-class DispatchLibc : public DispatchBase {
+class DispatchLibc : public DispatchBase
+{
 public:
-    static DispatchLibc *get_instance();
+    static DispatchLibc* get_instance();
 
-    ~DispatchLibc()=default;
+    ~DispatchLibc() = default;
 
-    bool dispatch_args(inst_trace_info_t *info) override;
+    bool dispatch_args(inst_trace_info_t* info) override;
 
-    bool dispatch_ret(inst_trace_info_t *info, const QBDI::GPRState *ret_status) override;
+    bool dispatch_ret(inst_trace_info_t* info, const QBDI::GPRState* ret_status) override;
 
 private:
+    bool get_format_result(inst_trace_info_t* info, const QBDI::GPRState* ret_status);
+    bool record_memory_info(inst_trace_info_t* info, const QBDI::GPRState* ret_status);
+
     DispatchLibc();
 };
 

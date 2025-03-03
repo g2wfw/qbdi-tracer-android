@@ -66,18 +66,23 @@ typedef struct inst_fun_call {
     std::vector<std::string> args = {};
 } inst_fun_call_t;
 
+typedef struct module_export_details {
+    uintptr_t addr;
+    const char* name;
+} module_export_details_t;
+
 
 typedef struct inst_trace_info {
     uintptr_t pc = 0;
     trace_vm_status_t pre_status{};
     trace_vm_status_t post_status{};
-    inst_fun_call_t *fun_call = nullptr;
-    const QBDI::InstAnalysis *inst_analysis = nullptr;
+    inst_fun_call_t* fun_call = nullptr;
+    const QBDI::InstAnalysis* inst_analysis = nullptr;
 } inst_trace_info_t;
 
 
-template<typename Container>
-static inline std::string join(const Container &v, const char *delim) {
+template <typename Container>
+static inline std::string join(const Container& v, const char* delim) {
     if (v.empty()) {
         return "[]";
     }
@@ -100,5 +105,9 @@ static inline std::string join(const Container &v, const char *delim) {
         } \
     } while (0)
 
+
+#define DISALLOW_COPY_AND_ASSIGN(TypeName)       \
+    TypeName(const TypeName&) = delete;          \
+    void operator=(const TypeName&) = delete
 
 #endif //QBDI_TRACER_COMMON_H

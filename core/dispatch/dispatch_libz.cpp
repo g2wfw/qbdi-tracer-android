@@ -177,7 +177,7 @@ DispatchLibz::DispatchLibz() {
         trace_info->fun_call->ret_type = kNumber;
     });
     //mmap
-    mmap()
+
 
 
     gum_module_enumerate_exports(module, dispatch_export_func, this);

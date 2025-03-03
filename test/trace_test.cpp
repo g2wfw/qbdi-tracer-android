@@ -30,20 +30,10 @@
 #include "linux_syscall_support.h"
 
 void libc_call() {
-    /*  auto fd = strlen("/proc/self/cmdline");
-      LOGI("len:%lu", fd);
-      uint8_t *buffer = new uint8_t[fd];
-      for (int i = 0; i < fd; ++i) {
-          buffer[i] = i & 0xff;
-      }
-      delete[] buffer;*/
+    void *ptr = malloc(100);
+    LOGI("ptr:%p",ptr);
 
-    auto fd2 = sys_open("/proc/self/cmdline", O_RDONLY, 0);
-    if (fd2 < 0) {
-        LOGE("open fail");
-    }
-    sys_close(fd2);
-
+    free(ptr);
 }
 
 
@@ -66,7 +56,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
     }
     smjni::jni_provider::init(env);
     LOGI("init qdbi trace .....");
-    //run_qbdi();
+    run_qbdi();
     return JNI_VERSION_1_6;
 }
 
@@ -74,12 +64,10 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_com_g2w_Itrace_trace_1test(JNIEnv *env, jclass clazz) {
     auto instance = InstructionTracerManager::get_instance();
-    if (!instance->init("libxxx.so", 0x846B8)) {
+    if (!instance->init("libmtguard.so", 0x846B8)) {
         LOGE("init qdbi fail");
         return;
     }
-    instance->add_record_range(0x131680, 0x134EE4);
-    instance->add_record_range(0x134F70, 0x1362B8);
     instance->get_info_manager()->set_enable_to_file(true);
     instance->get_info_manager()->set_enable_to_logcat(true);
     instance->run_attach();
