@@ -5,14 +5,15 @@
 #include "dispatch_syscall.h"
 #include <spdlog/fmt/fmt.h>
 #include <sys/syscall.h>
+#include <sys/prctl.h>
 #include "../memory_manager.h"
 
-DispatchSyscall* DispatchSyscall::get_instance() {
+DispatchSyscall *DispatchSyscall::get_instance() {
     static DispatchSyscall syscall;
     return &syscall;
 }
 
-bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
+bool DispatchSyscall::dispatch_args(inst_trace_info_t *trace_info) {
     trace_info->fun_call->call_module_name = "kernel_syscall";
     auto arg0 = get_arg_register_value(&trace_info->pre_status, 0);
     auto arg1 = get_arg_register_value(&trace_info->pre_status, 1);
@@ -2556,7 +2557,8 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             }}},
             {__NR_setxattr,               {"setxattr",               [&]() {
                 // https://man7.org/linux/man-pages/man2/setxattr.2.html
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg0)));
                 trace_info->fun_call->args.push_back(fmt::format("name={:#x}", arg1));
                 trace_info->fun_call->args.push_back(fmt::format("value={:#x}", arg2));
                 trace_info->fun_call->args.push_back(fmt::format("size={:#x}", arg3));
@@ -2565,8 +2567,10 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             }}},
             {__NR_lsetxattr,              {"lgetxattr",              [&]() {
                 // https://man7.org/linux/man-pages/man2/getxattr.2.html
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg0)));
-                trace_info->fun_call->args.push_back(fmt::format("name={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("name={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("value={:#x}", arg2));
                 trace_info->fun_call->args.push_back(fmt::format("size={:#x}", arg3));
                 trace_info->fun_call->args.push_back(fmt::format("flags={:#x}", arg4));
@@ -2575,7 +2579,8 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
 
             {__NR_fsetxattr,              {"fsetxattr",              [&]() {
                 trace_info->fun_call->args.push_back(fmt::format("fd={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("name={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("name={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("value={:#x}", arg2));
                 trace_info->fun_call->args.push_back(fmt::format("size={:#x}", arg3));
                 trace_info->fun_call->args.push_back(fmt::format("flags={:#x}", arg4));
@@ -2583,16 +2588,20 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             }}},
             {__NR_getxattr,               {"getxattr",               [&]() {
                 //ssize_t getxattr(const char* __path, const char* __name, void* __value, size_t __size)
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg0)));
-                trace_info->fun_call->args.push_back(fmt::format("name={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("name={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("value={:#x}", arg2));
                 trace_info->fun_call->args.push_back(fmt::format("size={:#x}", arg3));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             {__NR_lgetxattr,              {"lgetxattr",              [&]() {
                 //ssize_t lgetxattr(const char* __path, const char* __name, void* __value, size_t __size)
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg0)));
-                trace_info->fun_call->args.push_back(fmt::format("name={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("name={}", read_string_from_address(arg0)));
                 trace_info->fun_call->args.push_back(fmt::format("value={:#x}", arg2));
                 trace_info->fun_call->args.push_back(fmt::format("size={:#x}", arg3));
                 trace_info->fun_call->ret_type = kNumber;
@@ -2600,7 +2609,8 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             {__NR_fgetxattr,              {"fgetxattr",              [&]() {
                 //ssize_t fgetxattr(int __fd, const char* __name, void* __value, size_t __size)
                 trace_info->fun_call->args.push_back(fmt::format("fd={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("name={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("name={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("value={:#x}", arg2));
                 trace_info->fun_call->args.push_back(fmt::format("size={:#x}", arg3));
                 trace_info->fun_call->ret_type = kNumber;
@@ -2608,16 +2618,20 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
 
             {__NR_listxattr,              {"listxattr",              [&]() {
                 //ssize_t listxattr(const char* __path, char* __list, size_t __size)
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg0)));
-                trace_info->fun_call->args.push_back(fmt::format("list={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("list={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("size={:#x}", arg2));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
 
             {__NR_llistxattr,             {"llistxattr",             [&]() {
                 //ssize_t llistxattr(const char* __path, char* __list, size_t __size)
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg0)));
-                trace_info->fun_call->args.push_back(fmt::format("list={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("list={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("size={:#x}", arg2));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
@@ -2625,27 +2639,33 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             {__NR_flistxattr,             {"flistxattr",             [&]() {
                 //ssize_t flistxattr(int __fd, char* __list, size_t __size)
                 trace_info->fun_call->args.push_back(fmt::format("fd={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("list={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("list={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("size={:#x}", arg2));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             {__NR_removexattr,            {"removexattr",            [&]() {
                 //int removexattr(const char* __path, const char* __name)
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg0)));
-                trace_info->fun_call->args.push_back(fmt::format("name={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("name={}", read_string_from_address(arg1)));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
 
             {__NR_lremovexattr,           {"lremovexattr",           [&]() {
                 //int lremovexattr(const char* __path, const char* __name)
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg0)));
-                trace_info->fun_call->args.push_back(fmt::format("name={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("name={}", read_string_from_address(arg1)));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             {__NR_fremovexattr,           {"fremovexattr",           [&]() {
                 //int fremovexattr(int __fd, const char* __name)
                 trace_info->fun_call->args.push_back(fmt::format("fd={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("name={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("name={}", read_string_from_address(arg1)));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             {__NR_getcwd,                 {"getcwd",                 [&]() {
@@ -2718,7 +2738,8 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             {__NR_inotify_add_watch,      {"inotify_add_watch",      [&]() {
                 //int inotify_add_watch(int __fd, const char* __path, uint32_t __mask);
                 trace_info->fun_call->args.push_back(fmt::format("fd={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("mask={:#x}", arg2));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
@@ -2761,7 +2782,8 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             {__NR_mknodat,                {"mknodat",                [&]() {
                 //int mknodat(int __fd, const char* __path, mode_t __mode, dev_t __dev);
                 trace_info->fun_call->args.push_back(fmt::format("fd={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("mode={:#x}", arg2));
                 trace_info->fun_call->args.push_back(fmt::format("dev={:#x}", arg3));
                 trace_info->fun_call->ret_type = kNumber;
@@ -2769,30 +2791,36 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             {__NR_mkdirat,                {"mkdirat",                [&]() {
                 //int mkdirat(int __fd, const char* __path, mode_t __mode);
                 trace_info->fun_call->args.push_back(fmt::format("fd={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("mode={:#x}", arg2));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             {__NR_unlinkat,               {"unlinkat",               [&]() {
                 //int unlinkat(int __fd, const char* __path, int __flag);
                 trace_info->fun_call->args.push_back(fmt::format("fd={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("flag={:#x}", arg2));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             {__NR_symlinkat,              {"symlinkat",              [&]() {
                 //int symlinkat(const char* __oldpath, int __fd, const char* __newpath);
-                trace_info->fun_call->args.push_back(fmt::format("oldpath={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("oldpath={}", read_string_from_address(arg0)));
                 trace_info->fun_call->args.push_back(fmt::format("fd={:#x}", arg1));
-                trace_info->fun_call->args.push_back(fmt::format("newpath={}", read_string_from_address(arg2)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("newpath={}", read_string_from_address(arg2)));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             {__NR_linkat,                 {"linkat",                 [&]() {
                 //int linkat(int __fromfd, const char* __frompath, int __tofd,)
                 trace_info->fun_call->args.push_back(fmt::format("fromfd={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("frompath={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("frompath={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("tofd={:#x}", arg2));
-                trace_info->fun_call->args.push_back(fmt::format("topath={}", read_string_from_address(arg3)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("topath={}", read_string_from_address(arg3)));
                 trace_info->fun_call->args.push_back(fmt::format("flags={:#x}", arg4));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
@@ -2800,31 +2828,40 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             {__NR_renameat,               {"renameat",               [&]() {
                 //int renameat(int __oldfd, const char* __oldpath, int __newfd, const char* __newpath);
                 trace_info->fun_call->args.push_back(fmt::format("oldfd={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("oldpath={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("oldpath={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("newfd={:#x}", arg2));
-                trace_info->fun_call->args.push_back(fmt::format("newpath={}", read_string_from_address(arg3)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("newpath={}", read_string_from_address(arg3)));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             //__NR_umount2
             {__NR_umount2,                {"umount2",                [&]() {
                 //int umount2(const char* __target, int __flags);
-                trace_info->fun_call->args.push_back(fmt::format("target={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("target={}", read_string_from_address(arg0)));
                 trace_info->fun_call->args.push_back(fmt::format("flags={:#x}", arg1));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             {__NR_mount,                  {"mount",                  [&]() {
                 //int mount(const char* __source, const char* __target, const char* __filesystemtype, unsigned long __mountflags, const void* __data)
-                trace_info->fun_call->args.push_back(fmt::format("source={}", read_string_from_address(arg0)));
-                trace_info->fun_call->args.push_back(fmt::format("target={}", read_string_from_address(arg1)));
-                trace_info->fun_call->args.push_back(fmt::format("filesystemtype={}", read_string_from_address(arg2)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("source={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("target={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("filesystemtype={}", read_string_from_address(arg2)));
                 trace_info->fun_call->args.push_back(fmt::format("mountflags={:#x}", arg3));
-                trace_info->fun_call->args.push_back(fmt::format("data={}", read_string_from_address(arg4)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("data={}", read_string_from_address(arg4)));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             {__NR_pivot_root,             {"pivot_root",             [&]() {
                 //int pivot_root(const char* __new_root, const char* __put_old);
-                trace_info->fun_call->args.push_back(fmt::format("new_root={}", read_string_from_address(arg0)));
-                trace_info->fun_call->args.push_back(fmt::format("put_old={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("new_root={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("put_old={}", read_string_from_address(arg1)));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             //__NR_nfsservctl
@@ -2838,7 +2875,8 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             //__NR3264_statfs
             {__NR3264_statfs,             {"statfs",                 [&]() {
                 //int statfs(const char* __path, struct statfs* __buf);
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg0)));
                 trace_info->fun_call->args.push_back(fmt::format("buf={:#x}", arg1));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
@@ -2852,7 +2890,8 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             //__NR3264_truncate
             {__NR3264_truncate,           {"truncate",               [&]() {
                 //int truncate(const char* __path, long __length);
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg0)));
                 trace_info->fun_call->args.push_back(fmt::format("length={:#x}", arg1));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
@@ -2876,7 +2915,8 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             {__NR_faccessat,              {"faccessat",              [&]() {
                 //int faccessat(int __dirfd, const char* __path, int __mode, int __flags);
                 trace_info->fun_call->args.push_back(fmt::format("dirfd={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("mode={:#x}", arg2));
                 trace_info->fun_call->args.push_back(fmt::format("flags={:#x}", arg3));
                 trace_info->fun_call->ret_type = kNumber;
@@ -2884,7 +2924,8 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             //__NR_chdir
             {__NR_chdir,                  {"chdir",                  [&]() {
                 //int chdir(const char* __path);
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg0)));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             //__NR_fchdir
@@ -2896,7 +2937,8 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             //__NR_chroot
             {__NR_chroot,                 {"chroot",                 [&]() {
                 //int chroot(const char* __path);
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg0)));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             //__NR_fchmod
@@ -2910,7 +2952,8 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             {__NR_fchmodat,               {"fchmodat",               [&]() {
                 //int fchmodat(int __dirfd, const char* __path, mode_t __mode, int __flags);
                 trace_info->fun_call->args.push_back(fmt::format("dirfd={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("mode={:#x}", arg2));
                 trace_info->fun_call->args.push_back(fmt::format("flags={:#x}", arg3));
                 trace_info->fun_call->ret_type = kNumber;
@@ -2918,7 +2961,8 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             {__NR_fchownat,               {"fchownat",               [&]() {
                 //int fchownat(int __dirfd, const char* __path, uid_t __uid, gid_t __gid, int __flags);
                 trace_info->fun_call->args.push_back(fmt::format("dirfd={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("uid={:#x}", arg2));
                 trace_info->fun_call->args.push_back(fmt::format("gid={:#x}", arg3));
                 trace_info->fun_call->args.push_back(fmt::format("flags={:#x}", arg4));
@@ -2935,7 +2979,8 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             {__NR_openat,                 {"openat",                 [&]() {
                 //int openat(int __dirfd, const char* __path, int __flags, mode_t __mode);
                 trace_info->fun_call->args.push_back(fmt::format("dirfd={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("flags={:#x}", arg2));
                 trace_info->fun_call->args.push_back(fmt::format("mode={:#x}", arg3));
                 trace_info->fun_call->ret_type = kNumber;
@@ -2962,7 +3007,8 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             {__NR_quotactl,               {"quotactl",               [&]() {
                 //int quotactl(int __cmd, const char* __special, int __id, void* __addr);
                 trace_info->fun_call->args.push_back(fmt::format("cmd={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("special={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("special={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("id={:#x}", arg2));
                 trace_info->fun_call->args.push_back(fmt::format("addr={:#x}", arg3));
             }}},
@@ -3105,7 +3151,8 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             {__NR_readlinkat,             {"readlinkat",             [&]() {
                 // ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz);
                 trace_info->fun_call->args.push_back(fmt::format("dirfd={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("pathname={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("pathname={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("buf={:#x}", arg2));
                 trace_info->fun_call->args.push_back(fmt::format("bufsiz={:#x}", arg3));
                 trace_info->fun_call->ret_type = kNumber;
@@ -3113,7 +3160,8 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             {__NR3264_fstatat,            {"fstatat",                [&]() {
                 // int fstatat(int dirfd, const char *pathname, struct stat *statbuf, int flags);
                 trace_info->fun_call->args.push_back(fmt::format("dirfd={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("pathname={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("pathname={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("statbuf={:#x}", arg2));
                 trace_info->fun_call->args.push_back(fmt::format("flags={:#x}", arg3));
                 trace_info->fun_call->ret_type = kNumber;
@@ -3169,14 +3217,16 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             {__NR_utimensat,              {"utimensat",              [&]() {
                 // int utimensat(int dirfd, const char *pathname, const struct timespec times[2], int flags);
                 trace_info->fun_call->args.push_back(fmt::format("dirfd={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("pathname={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("pathname={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("times={:#x}", arg2));
                 trace_info->fun_call->args.push_back(fmt::format("flags={:#x}", arg3));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             {__NR_acct,                   {"acct",                   [&]() {
                 // int acct(const char *filename);
-                trace_info->fun_call->args.push_back(fmt::format("filename={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("filename={}", read_string_from_address(arg0)));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             {__NR_capget,                 {"capget",                 [&]() {
@@ -3278,12 +3328,14 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
                 // int init_module(void *module_image, unsigned long len, const char *param_values);
                 trace_info->fun_call->args.push_back(fmt::format("module_image={:#x}", arg0));
                 trace_info->fun_call->args.push_back(fmt::format("len={:#x}", arg1));
-                trace_info->fun_call->args.push_back(fmt::format("param_values={}", read_string_from_address(arg2)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("param_values={}", read_string_from_address(arg2)));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             {__NR_delete_module,          {"delete_module",          [&]() {
                 // int delete_module(const char *name_user, unsigned int flags);
-                trace_info->fun_call->args.push_back(fmt::format("name_user={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("name_user={}", read_string_from_address(arg0)));
                 trace_info->fun_call->args.push_back(fmt::format("flags={:#x}", arg1));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
@@ -3618,13 +3670,15 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             }}},
             {__NR_sethostname,            {"sethostname",            [&]() {
                 // int sethostname(const char *name, size_t len);
-                trace_info->fun_call->args.push_back(fmt::format("name={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("name={}", read_string_from_address(arg0)));
                 trace_info->fun_call->args.push_back(fmt::format("len={:#x}", arg1));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             {__NR_setdomainname,          {"setdomainname",          [&]() {
                 // int setdomainname(const char *name, size_t len);
-                trace_info->fun_call->args.push_back(fmt::format("name={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("name={}", read_string_from_address(arg0)));
                 trace_info->fun_call->args.push_back(fmt::format("len={:#x}", arg1));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
@@ -3688,7 +3742,8 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
 
                     case PR_SET_NO_NEW_PRIVS:
                         trace_info->fun_call->args.push_back(fmt::format("PR_SET_NO_NEW_PRIVS"));
-                        trace_info->fun_call->args.push_back(fmt::format("no_new_privs={:#x}", arg1));
+                        trace_info->fun_call->args.push_back(
+                                fmt::format("no_new_privs={:#x}", arg1));
                         trace_info->fun_call->ret_type = kNumber;
                         break;
 
@@ -3698,7 +3753,8 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
                         break;
 
                     default:
-                        trace_info->fun_call->args.push_back(fmt::format("unknown prctl option: {:#x}", arg0));
+                        trace_info->fun_call->args.push_back(
+                                fmt::format("unknown prctl option: {:#x}", arg0));
                         trace_info->fun_call->ret_type = kNumber;
                         break;
                 }
@@ -3774,14 +3830,16 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             //__NR_mq_open
             {__NR_mq_open,                {"mq_open",                [&]() {
                 // mqd_t mq_open(const char *_Nonnull name, int oflag, ...);
-                trace_info->fun_call->args.push_back(fmt::format("name={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("name={}", read_string_from_address(arg0)));
                 trace_info->fun_call->args.push_back(fmt::format("oflag={}", arg1));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             //__NR_mq_unlink
             {__NR_mq_unlink,              {"mq_unlink",              [&]() {
                 // int mq_unlink(const char *_Nonnull name);
-                trace_info->fun_call->args.push_back(fmt::format("name={:#x}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("name={:#x}", read_string_from_address(arg0)));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             // __NR_mq_timedsend 182
@@ -4081,8 +4139,10 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             // __NR_add_key 217
             {__NR_add_key,                {"add_key",                [&]() {
                 // int add_key(const char *type, const char *description, const void *payload, size_t plen, key_serial_t destringid);
-                trace_info->fun_call->args.push_back(fmt::format("type={}", read_string_from_address(arg0)));
-                trace_info->fun_call->args.push_back(fmt::format("description={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("type={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("description={}", read_string_from_address(arg1)));
                 trace_info->fun_call->args.push_back(fmt::format("payload={:#x}", arg2));
                 trace_info->fun_call->args.push_back(fmt::format("plen={:#x}", arg3));
                 trace_info->fun_call->args.push_back(fmt::format("destringid={:#x}", arg4));
@@ -4092,10 +4152,14 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             // __NR_request_key 218
             {__NR_request_key,            {"request_key",            [&]() {
                 // key_serial_t request_key(const char *type, const char *description, const char *callout_info, key_serial_t destringid);
-                trace_info->fun_call->args.push_back(fmt::format("type={}", read_string_from_address(arg0)));
-                trace_info->fun_call->args.push_back(fmt::format("description={}", read_string_from_address(arg1)));
-                trace_info->fun_call->args.push_back(fmt::format("callout_info={}", read_string_from_address(arg2)));
-                trace_info->fun_call->args.push_back(fmt::format("destringid={}", read_string_from_address(arg3)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("type={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("description={}", read_string_from_address(arg1)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("callout_info={}", read_string_from_address(arg2)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("destringid={}", read_string_from_address(arg3)));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             // __NR_keyctl 219
@@ -4122,7 +4186,8 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             // __NR_execve 221
             {__NR_execve,                 {"execve",                 [&]() {
                 // int execve(const char *pathname, char *const argv[], char *const envp[]);
-                trace_info->fun_call->args.push_back(fmt::format("pathname={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("pathname={}", read_string_from_address(arg0)));
                 trace_info->fun_call->args.push_back(fmt::format("argv={}", arg1));
                 trace_info->fun_call->args.push_back(fmt::format("envp={}", arg2));
                 trace_info->fun_call->ret_type = kNumber;
@@ -4150,14 +4215,16 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
             // __NR_swapon 224
             {__NR_swapon,                 {"swapon",                 [&]() {
                 // int swapon(const char *path, int swapflags);
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg0)));
                 trace_info->fun_call->args.push_back(fmt::format("swapflags={:#x}", arg1));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             // __NR_swapoff 225
             {__NR_swapoff,                {"swapoff",                [&]() {
                 // int swapoff(const char *path);
-                trace_info->fun_call->args.push_back(fmt::format("path={}", read_string_from_address(arg0)));
+                trace_info->fun_call->args.push_back(
+                        fmt::format("path={}", read_string_from_address(arg0)));
                 trace_info->fun_call->ret_type = kNumber;
             }}},
             // __NR_mprotect 226
@@ -4660,50 +4727,51 @@ bool DispatchSyscall::dispatch_args(inst_trace_info_t* trace_info) {
     return false;
 }
 
-bool DispatchSyscall::dispatch_ret(inst_trace_info_t* info, const QBDI::GPRState* ret_status) {
+bool DispatchSyscall::dispatch_ret(inst_trace_info_t *info, const QBDI::GPRState *ret_status) {
     auto ret_value = get_ret_register_value(ret_status, 0);
     record_memory_info(info, ret_status);
     info->fun_call->ret_value = fmt::format("ret= {:#x}", ret_value);
     return true;
 }
 
-bool DispatchSyscall::record_memory_info(inst_trace_info_t* trace_info, const QBDI::GPRState* ret_status) {
-     auto fun_name = trace_info->fun_call->fun_name;
+void DispatchSyscall::record_memory_info(inst_trace_info_t *trace_info,
+                                         const QBDI::GPRState *ret_status) {
+    auto fun_name = trace_info->fun_call->fun_name;
     if (fun_name.empty()) {
-        return false;
+        return;
     }
     auto ret_value = get_ret_register_value(ret_status, 0);
     auto arg0 = get_arg_register_value(&trace_info->pre_status, 0);
     auto arg1 = get_arg_register_value(&trace_info->pre_status, 1);
     auto arg2 = get_arg_register_value(&trace_info->pre_status, 2);
     const std::unordered_map<std::string, std::function<void()>> memory_fun_handlers = {
-        {"mmap", [&]() {
-            //void* mmap(void* __addr, size_t __byte_count, int __prot, int __flags, int __fd, off_t __offset)
-            if (arg1 == 0 || ret_value == 0) {
-                return;
-            }
-            MemoryManager::get_instance()->add_memory(ret_value, arg1);
-        }},
-        {"mmap2", [&]() {
-            //void* mmap(void* __addr, size_t __byte_count, int __prot, int __flags, int __fd, off_t __offset)
-            if (arg1 == 0 || ret_value == 0) {
-                return;
-            }
-            MemoryManager::get_instance()->add_memory(ret_value, arg1);
-        }},
-        {"munmap", [&]() {
-            //int munmap(void* __addr, size_t __byte_count)
-            if (arg0 == 0) {
-                return;
-            }
-            MemoryManager::get_instance()->remove_memory(arg0);
-        }},
+            {"mmap",   [&]() {
+                //void* mmap(void* __addr, size_t __byte_count, int __prot, int __flags, int __fd, off_t __offset)
+                if (arg1 == 0 || ret_value == 0) {
+                    return;
+                }
+                trace_info->fun_call->memory_alloc_address = ret_value;
+                trace_info->fun_call->memory_alloc_size = arg1;
+            }},
+            {"mmap2",  [&]() {
+                //void* mmap(void* __addr, size_t __byte_count, int __prot, int __flags, int __fd, off_t __offset)
+                if (arg1 == 0 || ret_value == 0) {
+                    return;
+                }
+                trace_info->fun_call->memory_alloc_address = ret_value;
+                trace_info->fun_call->memory_alloc_size = arg1;
+            }},
+            {"munmap", [&]() {
+                //int munmap(void* __addr, size_t __byte_count)
+                if (arg0 == 0) {
+                    return;
+                }
+                trace_info->fun_call->memory_free_address = arg0;
+            }},
     };
     if (memory_fun_handlers.find(fun_name) != memory_fun_handlers.end()) {
         memory_fun_handlers.at(fun_name)();
-        return true;
     }
-    return false;
 }
 
 DispatchSyscall::DispatchSyscall() {}

@@ -6,15 +6,15 @@
 #include "instruction_call_back.h"
 #include "instruction_register_utils.h"
 
-QBDI::VMAction pre_instruction_call(QBDI::VM* vm, QBDI::GPRState* gprState,
-                                    QBDI::FPRState* fprState, void* data) {
-    const QBDI::InstAnalysis* inst = vm->getInstAnalysis(
-        QBDI::AnalysisType::ANALYSIS_INSTRUCTION | QBDI::AnalysisType::ANALYSIS_DISASSEMBLY
-        | QBDI::AnalysisType::ANALYSIS_OPERANDS);
+QBDI::VMAction pre_instruction_call(QBDI::VM *vm, QBDI::GPRState *gprState,
+                                    QBDI::FPRState *fprState, void *data) {
+    const QBDI::InstAnalysis *inst = vm->getInstAnalysis(
+            QBDI::AnalysisType::ANALYSIS_INSTRUCTION | QBDI::AnalysisType::ANALYSIS_DISASSEMBLY
+            | QBDI::AnalysisType::ANALYSIS_OPERANDS);
     if (inst == nullptr) {
         return QBDI::VMAction::CONTINUE;
     }
-    auto self = (InstructionTracerManager*)data;
+    auto self = (InstructionTracerManager *) data;
     if (self == nullptr) {
         LOGE("callback data is nullptr in pre call");
         return QBDI::VMAction::STOP;
@@ -22,7 +22,7 @@ QBDI::VMAction pre_instruction_call(QBDI::VM* vm, QBDI::GPRState* gprState,
     if (!self->is_need_record(gprState->pc)) {
         return QBDI::VMAction::CONTINUE;
     }
-    auto& info_manger = self->get_info_manager();
+    auto &info_manger = self->get_info_manager();
     if (info_manger == nullptr) {
         LOGE("info_manger is nullptr in pre call");
         return QBDI::VMAction::STOP;
@@ -42,23 +42,23 @@ QBDI::VMAction pre_instruction_call(QBDI::VM* vm, QBDI::GPRState* gprState,
 }
 
 
-QBDI::VMAction post_instruction_call(QBDI::VM* vm, QBDI::GPRState* gprState,
-                                     QBDI::FPRState* fprState, void* data) {
-    auto self = (InstructionTracerManager*)data;
+QBDI::VMAction post_instruction_call(QBDI::VM *vm, QBDI::GPRState *gprState,
+                                     QBDI::FPRState *fprState, void *data) {
+    auto self = (InstructionTracerManager *) data;
     if (self == nullptr) {
         LOGE("callback data is nullptr in post call");
         return QBDI::VMAction::STOP;
     }
-    const QBDI::InstAnalysis* inst = vm->getInstAnalysis(
-        QBDI::AnalysisType::ANALYSIS_INSTRUCTION | QBDI::AnalysisType::ANALYSIS_DISASSEMBLY
-        | QBDI::AnalysisType::ANALYSIS_OPERANDS);
+    const QBDI::InstAnalysis *inst = vm->getInstAnalysis(
+            QBDI::AnalysisType::ANALYSIS_INSTRUCTION | QBDI::AnalysisType::ANALYSIS_DISASSEMBLY
+            | QBDI::AnalysisType::ANALYSIS_OPERANDS);
     if (inst == nullptr) {
         return QBDI::VMAction::CONTINUE;
     }
     if (!self->is_need_record(inst->address)) {
         return QBDI::VMAction::CONTINUE;
     }
-    auto& info_manger = self->get_info_manager();
+    auto &info_manger = self->get_info_manager();
     if (info_manger == nullptr) {
         LOGE("info_manger is nullptr in post call");
         return QBDI::VMAction::STOP;
@@ -103,9 +103,9 @@ QBDI::VMAction post_instruction_call(QBDI::VM* vm, QBDI::GPRState* gprState,
         auto access_list = vm->getInstMemoryAccess();
         if (!access_list.empty()) {
             access_list.erase(std::remove_if(access_list.begin(), access_list.end(),
-                                             [&](const QBDI::MemoryAccess& ma) {
+                                             [&](const QBDI::MemoryAccess &ma) {
                                                  return self->is_address_in_stack_range(
-                                                     ma.accessAddress);
+                                                         ma.accessAddress);
                                              }), access_list.end());
         }
         info_manger->write_trace_info(inst, access_list);
@@ -118,8 +118,8 @@ QBDI::VMAction post_instruction_call(QBDI::VM* vm, QBDI::GPRState* gprState,
 }
 
 QBDI::VMAction
-on_fun_call(QBDI::VMInstanceRef vm, const QBDI::VMState* state, QBDI::GPRState* gprState,
-            QBDI::FPRState* fprState, void* data) {
+on_fun_call(QBDI::VMInstanceRef vm, const QBDI::VMState *state, QBDI::GPRState *gprState,
+            QBDI::FPRState *fprState, void *data) {
     /*  auto self = (InstructionTracerManager *) data;
       if (self == nullptr) {
           LOGE("callback data is nullptr in pre call");
@@ -137,9 +137,9 @@ on_fun_call(QBDI::VMInstanceRef vm, const QBDI::VMState* state, QBDI::GPRState* 
 }
 
 QBDI::VMAction
-on_memory_read_or_write(QBDI::VMInstanceRef vm, QBDI::GPRState* gprState,
-                        QBDI::FPRState* fprState,
-                        void* data) {
+on_memory_read_or_write(QBDI::VMInstanceRef vm, QBDI::GPRState *gprState,
+                        QBDI::FPRState *fprState,
+                        void *data) {
     return QBDI::CONTINUE;
 }
 
@@ -149,7 +149,7 @@ static void (*frida_old_enter)() = nullptr;
 static long long get_timestamp() {
     struct timeval tv;
     gettimeofday(&tv, nullptr);
-    return (long long)tv.tv_sec * 1000 + tv.tv_usec / 1000;
+    return (long long) tv.tv_sec * 1000 + tv.tv_usec / 1000;
 }
 
 static void dump_time_diff(long long start, long long end) {
@@ -163,7 +163,7 @@ static void dump_time_diff(long long start, long long end) {
 void frida_on_enter() {
     auto ic = gum_interceptor_get_current_invocation();
     auto user_data = gum_invocation_context_get_replacement_data(ic);
-    auto* self = (InstructionTracerManager*)user_data;
+    auto *self = (InstructionTracerManager *) user_data;
     gum_interceptor_revert(self->get_interceptor(), ic->function);
     gum_interceptor_flush(self->get_interceptor());
 
@@ -180,7 +180,7 @@ void frida_on_enter() {
                            user_data);
         vm->addInstrumentedModuleFromAddr(reinterpret_cast<QBDI::rword>(ic->function));
         auto start = get_timestamp();
-        auto result = vm->call(&ret_value, (QBDI::rword)ic->function, {});
+        auto result = vm->call(&ret_value, (QBDI::rword) ic->function, {});
         if (!result) {
             LOGE("run fail");
         }
@@ -191,21 +191,21 @@ void frida_on_enter() {
 }
 
 QBDI::VMAction
-pre_svc_instruction_call(QBDI::VM* vm, QBDI::GPRState* gprState, QBDI::FPRState* fprState,
-                         void* data) {
-    const auto self = static_cast<InstructionTracerManager*>(data);
+pre_svc_instruction_call(QBDI::VM *vm, QBDI::GPRState *gprState, QBDI::FPRState *fprState,
+                         void *data) {
+    const auto self = static_cast<InstructionTracerManager *>(data);
     if (self == nullptr) {
         LOGE("callback data is nullptr in pre svc");
         return QBDI::VMAction::STOP;
     }
-    auto& info_manger = self->get_info_manager();
+    auto &info_manger = self->get_info_manager();
     if (info_manger == nullptr) {
         LOGE("info_manger is nullptr in post call");
         return QBDI::VMAction::STOP;
     }
-    const QBDI::InstAnalysis* inst = vm->getInstAnalysis(
-        QBDI::AnalysisType::ANALYSIS_INSTRUCTION | QBDI::AnalysisType::ANALYSIS_DISASSEMBLY
-        | QBDI::AnalysisType::ANALYSIS_OPERANDS);
+    const QBDI::InstAnalysis *inst = vm->getInstAnalysis(
+            QBDI::AnalysisType::ANALYSIS_INSTRUCTION | QBDI::AnalysisType::ANALYSIS_DISASSEMBLY
+            | QBDI::AnalysisType::ANALYSIS_OPERANDS);
 
     auto current_info = info_manger->get_current_inst_trace_info();
     if (current_info->fun_call == nullptr) {

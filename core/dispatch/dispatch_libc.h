@@ -9,17 +9,18 @@
 
 class DispatchLibc final : public DispatchBase {
 public:
-    static DispatchLibc* get_instance();
+    static DispatchLibc *get_instance();
 
     ~DispatchLibc() override = default;
 
-    bool dispatch_args(inst_trace_info_t* info) override;
+    bool dispatch_args(inst_trace_info_t *info) override;
 
-    bool dispatch_ret(inst_trace_info_t* info, const QBDI::GPRState* ret_status) override;
+    bool dispatch_ret(inst_trace_info_t *info, const QBDI::GPRState *ret_status) override;
 
 private:
-    bool get_format_result(inst_trace_info_t* info, const QBDI::GPRState* ret_status);
-    bool record_memory_info(inst_trace_info_t* info, const QBDI::GPRState* ret_status);
+    bool get_format_result(inst_trace_info_t *info, const QBDI::GPRState *ret_status);
+
+    void record_memory_info(inst_trace_info_t *info, const QBDI::GPRState *ret_status);
 
     DispatchLibc();
 };

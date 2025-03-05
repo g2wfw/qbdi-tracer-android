@@ -7,7 +7,8 @@
 
 #include "dispatch_base.h"
 
-class DispatchSyscall final : public DispatchBase {
+class DispatchSyscall final : public DispatchBase
+{
 public:
     static DispatchSyscall* get_instance();
 
@@ -19,7 +20,7 @@ public:
 
 private:
     DispatchSyscall();
-    bool record_memory_info(inst_trace_info_t* info, const QBDI::GPRState* ret_status);
+    void record_memory_info(inst_trace_info_t* info, const QBDI::GPRState* ret_status);
 };
 
 #endif  //MEITUAN_DISPATCH_SYSCALL_H

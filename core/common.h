@@ -58,6 +58,9 @@ typedef struct trace_vm_status {
 
 typedef struct inst_fun_call {
     uintptr_t fun_address = 0;
+    uintptr_t memory_alloc_address = 0;
+    uintptr_t memory_alloc_size = 0;
+    uintptr_t memory_free_address = 0;
     fun_data_type_t ret_type = kUnknown;
     bool is_svc = false;
     std::string call_module_name;
@@ -68,14 +71,17 @@ typedef struct inst_fun_call {
 
 typedef struct module_export_details {
     uintptr_t addr;
-    const char* name;
+    const char *name;
 } module_export_details_t;
 
 typedef struct memory_info {
     uint64_t memory_index;
     uintptr_t start;
     uintptr_t end;
-    memory_info(uint64_t memory_index, uintptr_t start, uintptr_t end) : memory_index(memory_index), start(start), end(end) {}
+
+    memory_info(uint64_t memory_index, uintptr_t start, uintptr_t end) : memory_index(memory_index),
+                                                                         start(start), end(end) {}
+
     memory_info() = default;
 } memory_info_t;
 
@@ -83,19 +89,20 @@ typedef struct inst_trace_info {
     uintptr_t pc = 0;
     trace_vm_status_t pre_status{};
     trace_vm_status_t post_status{};
-    inst_fun_call_t* fun_call = nullptr;
-    const QBDI::InstAnalysis* inst_analysis = nullptr;
+    inst_fun_call_t *fun_call = nullptr;
+    const QBDI::InstAnalysis *inst_analysis = nullptr;
 } inst_trace_info_t;
 
 
-template <typename Container>
-static inline std::string join(const Container& v, const char* delim) {
+template<typename Container>
+static inline std::string join(const Container &v, const char *delim) {
     if (v.empty()) {
         return "[]";
     }
     std::ostringstream os;
     os << "[";
-    std::copy(v.begin(), std::prev(v.end()), std::ostream_iterator<typename Container::value_type>(os, delim));
+    std::copy(v.begin(), std::prev(v.end()),
+              std::ostream_iterator<typename Container::value_type>(os, delim));
     os << *(v.rbegin());
     os << "]";
     return os.str();

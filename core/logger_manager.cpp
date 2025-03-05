@@ -26,6 +26,7 @@
 #include "logger_manager.h"
 #include "jni_provider.h"
 #include "common.h"
+#include "memory_manager.h"
 #include <spdlog/sinks/android_sink.h>
 #include <spdlog/sinks/sink.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -44,7 +45,6 @@ static uint64_t get_timestamp_ms() {
 }
 
 static std::string get_files_dir(JNIEnv *env) {
-
     jclass activityThreadClass = env->FindClass("android/app/ActivityThread");
     jmethodID currentActivityThreadMethod = env->GetStaticMethodID(activityThreadClass,
                                                                    "currentActivityThread",
@@ -83,7 +83,7 @@ void LoggerManager::set_enable_to_logcat(bool enable) {
         return;
     }
     if (enable) {
-        this->logcat = spdlog::android_logger_mt("logcat", "qbdi");
+        this->logcat = spdlog::android_logger_mt("logcat_itrace", "qbdi");
         logcat->set_pattern("[%H:%M:%S.%e] %v");
     }
 }
@@ -97,7 +97,7 @@ void LoggerManager::set_enable_to_file(bool enable) {
             LOGE("mkdir failed %s", trace_log_dir.c_str());
             return;
         }
-        if (trace_log_file.empty()) {
+        if (trace_log_base.empty()) {
             trace_log_base = fmt::format("{}{}_{:x}_{:x}/", trace_log_dir,
                                          basename(this->module_name.c_str()), module_range.base,
                                          get_timestamp_ms());
@@ -107,9 +107,9 @@ void LoggerManager::set_enable_to_file(bool enable) {
         }
         if (this->file_log == nullptr) {
             spdlog::init_thread_pool(0x10000, 4);
-            this->file_log = spdlog::create_async<spdlog::sinks::basic_file_sink_mt>("itace",
+            this->file_log = spdlog::create_async<spdlog::sinks::basic_file_sink_mt>("itracer",
                                                                                      trace_log_base +
-                                                                                     "/itrace.log",
+                                                                                     "/itrace.txt",
                                                                                      false);
             this->file_log->set_pattern("[%H:%M:%S.%e] %v");
             spdlog::flush_every(std::chrono::seconds(20));
@@ -117,6 +117,34 @@ void LoggerManager::set_enable_to_file(bool enable) {
     } else {
         if (this->file_log != nullptr) {
             this->file_log.reset();
+        }
+    }
+}
+
+void LoggerManager::set_memory_dump_to_file(bool dump) {
+    if (dump) {
+        auto env = smjni::jni_provider::get_jni();
+        auto file_dir = get_files_dir(env);
+        std::string trace_log_dir = file_dir + "/itrace/";
+        if (!check_and_mkdir(trace_log_dir)) {
+            LOGE("mkdir failed %s", trace_log_dir.c_str());
+            return;
+        }
+        if (trace_log_base.empty()) {
+            trace_log_base = fmt::format("{}{}_{:x}_{:x}/", trace_log_dir,
+                                         basename(this->module_name.c_str()), module_range.base,
+                                         get_timestamp_ms());
+            if (!check_and_mkdir(trace_log_base)) {
+                LOGE("mkdir failed %s", trace_log_base.c_str());
+            }
+        }
+        if (memory_manager == nullptr) {
+            memory_manager = std::make_unique<MemoryManager>();
+        }
+        memory_manager->set_dump_path(trace_log_base + "/memory_dump.txt");
+    } else {
+        if (this->memory_manager != nullptr) {
+            this->memory_manager.reset();
         }
     }
 }
@@ -154,9 +182,18 @@ static inline std::string trim(const std::string &str) {
 
 void LoggerManager::write_trace_info(const inst_trace_info_t *info,
                                      const QBDI::InstAnalysis *instAnalysis,
-                                     std::vector<QBDI::MemoryAccess> &memoryAccesses) {
+                                     std::vector<QBDI::MemoryAccess> &memoryAccesses) const {
     if (this->logcat == nullptr && this->file_log == nullptr) {
         return;
+    }
+    if (info->fun_call != nullptr && !info->fun_call->fun_name.empty()) {
+        if (info->fun_call->memory_free_address != 0) {
+            memory_manager->remove_memory(info->fun_call->memory_free_address);
+        }
+        if (info->fun_call->memory_alloc_size != 0) {
+            memory_manager->add_memory(info->fun_call->memory_alloc_address,
+                                       info->fun_call->memory_alloc_size);
+        }
     }
     std::string line = (fmt::format("|{:#x}", info->pc));
     //[00:31:57.995]|0x76a5af6488|0x13214c| lsl w15, w15, #3|[W15= 0x8 ==> 0x40]
@@ -169,7 +206,6 @@ void LoggerManager::write_trace_info(const inst_trace_info_t *info,
     format_register_info(reg_info, info, instAnalysis);
     line.append("|");
     if (!reg_info.empty()) {
-
         line.append(reg_info);
     }
     line.append("|");
@@ -187,9 +223,6 @@ void LoggerManager::write_trace_info(const inst_trace_info_t *info,
     write_info(line);
 }
 
-static inline bool is_visible_char(char c) {
-    return std::isprint(static_cast<unsigned char>(c));
-}
 
 void LoggerManager::format_access_info(std::string &result,
                                        std::vector<QBDI::MemoryAccess> &memoryAccesses) const {
@@ -202,40 +235,55 @@ void LoggerManager::format_access_info(std::string &result,
             if (ma.type == QBDI::MemoryAccessType::MEMORY_READ) {
                 if (ma.size == 1 && isprint((int) ma.value)) {
                     ma_info.push_back(
-                            fmt::format("r o:{:#x}=>{:#x} {}", ma.accessAddress - module_range.base,
+                            fmt::format("read module offset:{:#x}=>{:#x} {}",
+                                        ma.accessAddress - module_range.base,
                                         ma.value,
                                         (char) ma.value));
                 } else {
                     ma_info.push_back(
-                            fmt::format("r o:{:#x}=>{:#x}", ma.accessAddress - module_range.base,
+                            fmt::format("read module offset:{:#x}=>{:#x}",
+                                        ma.accessAddress - module_range.base,
                                         ma.value));
                 }
             } else {
                 if (ma.size == 1 && isprint((int) ma.value)) {
                     ma_info.push_back(
-                            fmt::format("w o:{:#x}=>{:#x} {}", ma.accessAddress - module_range.base,
+                            fmt::format("write module offset:{:#x}=>{:#x} {}",
+                                        ma.accessAddress - module_range.base,
                                         ma.value,
                                         (char) ma.value));
                 } else {
                     ma_info.push_back(
-                            fmt::format("w o:{:#x}=>{:#x}", ma.accessAddress - module_range.base,
+                            fmt::format("write module offset:{:#x}=>{:#x}",
+                                        ma.accessAddress - module_range.base,
                                         ma.value));
                 }
             }
         } else {
+            auto [offset, memory_index] = this->memory_manager->get_memory_offset(ma.accessAddress);
             if (ma.type == QBDI::MemoryAccessType::MEMORY_READ) {
                 if (ma.size == 1 && isprint((int) ma.value)) {
-                    ma_info.push_back(fmt::format("r m:{:#x}=>{:#x} {}", ma.accessAddress, ma.value,
-                                                  (char) ma.value));
+                    ma_info.push_back(
+                            fmt::format("read memory:{:#x}=>{:#x} {} block:{:#x} offset:{:#x}",
+                                        ma.accessAddress, ma.value,
+                                        (char) ma.value, memory_index, offset));
                 } else {
-                    ma_info.push_back(fmt::format("r m:{:#x}=>{:#x}", ma.accessAddress, ma.value));
+                    ma_info.push_back(
+                            fmt::format("read memory:{:#x}=>{:#x}  block:{:#x} offset:{:#x}",
+                                        ma.accessAddress, ma.value, memory_index,
+                                        offset));
                 }
             } else {
                 if (ma.size == 1 && isprint((int) ma.value)) {
-                    ma_info.push_back(fmt::format("w m:{:#x}=>{:#x} {}", ma.accessAddress, ma.value,
-                                                  (char) ma.value));
+                    ma_info.push_back(
+                            fmt::format("write memory:{:#x}=>{:#x} {} block:{:#x} offset:{:#x}",
+                                        ma.accessAddress, ma.value,
+                                        (char) ma.value, memory_index, offset));
                 } else {
-                    ma_info.push_back(fmt::format("w m:{:#x}=>{:#x}", ma.accessAddress, ma.value));
+                    ma_info.push_back(
+                            fmt::format("write memory:{:#x}=>{:#x} block:{:#x} offset:{:#x}",
+                                        ma.accessAddress, ma.value, memory_index,
+                                        offset));
                 }
             }
         }
@@ -285,47 +333,47 @@ void LoggerManager::format_register_info(std::string &result, const inst_trace_i
                         if (operand.regAccess == QBDI::REGISTER_READ ||
                             operand.regAccess == QBDI::REGISTER_READ_WRITE) {
                             read_regs_vector.emplace_back(
-                                    fmt::format("{}= {:.2a}", operand.regName,
-                                                pre_fpr_state.vreg.s[operand.regCtxIdx]));
+                                fmt::format("{}= {:.2a}", operand.regName,
+                                            pre_fpr_state.vreg.s[operand.regCtxIdx]));
                         }
                         cur_regs_vector.emplace_back(
-                                fmt::format("{}= {:.2a}", operand.regName,
-                                            post_fpr_state.vreg.s[operand.regCtxIdx]));
+                            fmt::format("{}= {:.2a}", operand.regName,
+                                        post_fpr_state.vreg.s[operand.regCtxIdx]));
                     }
-                        break;
+                    break;
                     case 8: {
                         if (operand.regAccess == QBDI::REGISTER_READ ||
                             operand.regAccess == QBDI::REGISTER_READ_WRITE) {
                             read_regs_vector.emplace_back(
-                                    fmt::format("{}= {:.2a}", operand.regName,
-                                                pre_fpr_state.vreg.d[operand.regCtxIdx]));
+                                fmt::format("{}= {:.2a}", operand.regName,
+                                            pre_fpr_state.vreg.d[operand.regCtxIdx]));
                         }
                         cur_regs_vector.emplace_back(
-                                fmt::format("{}= {:.2a}", operand.regName,
-                                            post_fpr_state.vreg.d[operand.regCtxIdx]));
+                            fmt::format("{}= {:.2a}", operand.regName,
+                                        post_fpr_state.vreg.d[operand.regCtxIdx]));
                     }
-                        break;
+                    break;
                     case 16: {
                         //todo 128bit num read on arm32
                         if (operand.regAccess == QBDI::REGISTER_READ ||
                             operand.regAccess == QBDI::REGISTER_READ_WRITE) {
                             cur_regs_vector.emplace_back(
-                                    fmt::format("{}= {:#x}", operand.regName,
-                                                (uint64_t) pre_fpr_state.vreg.q[operand.regCtxIdx]));
+                                fmt::format("{}= {:#x}", operand.regName,
+                                            (uint64_t)pre_fpr_state.vreg.q[operand.regCtxIdx]));
                         }
                         cur_regs_vector.emplace_back(
-                                fmt::format("{}= {:#x}", operand.regName,
-                                            (uint64_t) post_fpr_state.vreg.q[operand.regCtxIdx]));
+                            fmt::format("{}= {:#x}", operand.regName,
+                                        (uint64_t)post_fpr_state.vreg.q[operand.regCtxIdx]));
                     }
-                        break;
+                    break;
                     default:
                         LOGE("fail to read %s %hx", operand.regName, operand.regCtxIdx);
                         break;
                 }
             } else if (operand.type == QBDI::OPERAND_GPR) {
                 cur_regs_vector.emplace_back(
-                        fmt::format("{}= {:#x}", operand.regName,
-                                    QBDI_GPR_GET(&post_gpr_state, operand.regCtxIdx)));
+                    fmt::format("{}= {:#x}", operand.regName,
+                                QBDI_GPR_GET(&post_gpr_state, operand.regCtxIdx)));
             }
 #else
 #define QBDI_FPR_GET(state, i) (reinterpret_cast<const __uint128_t *>(state)[i])
@@ -351,13 +399,10 @@ void LoggerManager::format_register_info(std::string &result, const inst_trace_i
                                     QBDI_GPR_GET(&post_gpr_state, operand.regCtxIdx)));
             }
 #endif
-
-
         }
     }
     if (!cur_regs_vector.empty()) {
         result.append(join(cur_regs_vector, ","));
-
     }
     if (!read_regs_vector.empty()) {
         result.append(",");
@@ -385,4 +430,4 @@ void LoggerManager::format_call_info(std::string &result, const inst_trace_info_
     result.append(call->ret_value);
 }
 
-
+LoggerManager::~LoggerManager() {}

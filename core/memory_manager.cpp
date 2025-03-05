@@ -22,21 +22,18 @@
  * THE SOFTWARE.
  */
 
-
+#include <spdlog/fmt/fmt.h>
 #include "memory_manager.h"
+#include "hex_dump.h"
 
-MemoryManager* MemoryManager::get_instance() {
-    static MemoryManager manager;
-    return &manager;
-}
-
-void MemoryManager::set_dump_path(const std::string& path) {
+void MemoryManager::set_dump_path(const std::string &path) {
     this->dump_path = path;
     this->memory_dump_file.open(path, std::ios::out | std::ios::trunc | std::ios::binary);
     if (this->memory_dump_file.is_open()) {
         LOGI("Memory dump file opened.");
     }
 }
+
 bool MemoryManager::add_memory(const uintptr_t addr, const size_t size) {
     auto end = addr + size;
     auto start = addr;
@@ -49,21 +46,35 @@ bool MemoryManager::add_memory(const uintptr_t addr, const size_t size) {
 }
 
 void MemoryManager::clear() {
+    for (auto &&memory_info: this->memory_infos) {
+        this->write_memory_buffer(reinterpret_cast<void *>(memory_info.start),
+                                  memory_info.end - memory_info.start, memory_info.memory_index);
+    }
     this->memory_infos.clear();
     this->memory_dump_file.flush();
     this->memory_dump_file.close();
 }
-size_t MemoryManager::write_memory_buffer(void* addr, size_t len) {
+
+
+bool MemoryManager::write_memory_buffer(void *addr, size_t len, size_t index) {
     // write hexdump to file
     if (!this->memory_dump_file.is_open()) {
-        return 0;
+        return false;
     }
-
-
+    //format buffer to hexdump
+    this->memory_dump_file << "memory block index:" << fmt::format("{:#x}\n", index);
+    const HexDump hexdump(addr, len);
+    this->memory_dump_file << hexdump;
+    this->memory_dump_file << "\n";
+    this->memory_dump_file.flush();
+    return true;
 }
+
 bool MemoryManager::remove_memory(const uintptr_t addr) {
     for (auto it = this->memory_infos.begin(); it != this->memory_infos.end();) {
         if (it->start == addr) {
+            this->write_memory_buffer(reinterpret_cast<void *>(it->start), it->end - it->start,
+                                      it->memory_index);
             it = memory_infos.erase(it);
             return true;
         }
@@ -76,24 +87,25 @@ bool MemoryManager::is_in_memory(uintptr_t addr) {
     if (addr == 0) {
         return false;
     }
-    return std::any_of(this->memory_infos.begin(), this->memory_infos.end(), [&](const auto& memory_info) {
-        if (addr >= memory_info.start && addr <= memory_info.end) {
-            return true;
-        }
-        return false;
-    });
+    return std::any_of(this->memory_infos.begin(), this->memory_infos.end(),
+                       [&](const auto &memory_info) {
+                           if (addr >= memory_info.start && addr <= memory_info.end) {
+                               return true;
+                           }
+                           return false;
+                       });
 }
 
-std::tuple<uintptr_t, size_t> MemoryManager::get_memory_offset(uintptr_t addr) {
+std::tuple<size_t, uint64_t> MemoryManager::get_memory_offset(uintptr_t addr) {
     size_t offset = -1;
-    uintptr_t start = 0;
-    std::any_of(this->memory_infos.begin(), this->memory_infos.end(), [&](const auto& memory_info) {
+    uint64_t block_index = 0;
+    std::any_of(this->memory_infos.begin(), this->memory_infos.end(), [&](const auto &memory_info) {
         if (addr >= memory_info.start && addr <= memory_info.end) {
             offset = addr - memory_info.start;
-            start = memory_info.start;
+            block_index = memory_info.memory_index;
             return true;
         }
         return false;
     });
-    return {start, offset};
+    return {offset, block_index};
 }

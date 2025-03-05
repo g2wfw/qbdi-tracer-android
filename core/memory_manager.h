@@ -31,13 +31,14 @@
 #include <vector>
 #include "common.h"
 
+
 class MemoryManager {
 public:
-    static MemoryManager* get_instance();
+    MemoryManager() = default;
 
     ~MemoryManager() = default;
 
-    void set_dump_path(const std::string& path);
+    void set_dump_path(const std::string &path);
 
     bool add_memory(uintptr_t addr, size_t size);
 
@@ -47,13 +48,12 @@ public:
 
     bool is_in_memory(uintptr_t addr);
 
-    std::tuple<uintptr_t, size_t> get_memory_offset(uintptr_t addr);
-
+    std::tuple<size_t, uint64_t> get_memory_offset(uintptr_t addr);
 
 private:
-    MemoryManager() = default;
 
-    size_t write_memory_buffer(void* addr, size_t len);
+
+    bool write_memory_buffer(void *addr, size_t len, size_t index);
 
 private:
     std::ofstream memory_dump_file;

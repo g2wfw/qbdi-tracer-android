@@ -30,28 +30,31 @@
 #include "linux_syscall_support.h"
 
 void libc_call() {
-    void *ptr = malloc(100);
-    LOGI("ptr:%p",ptr);
-
+    uint8_t* ptr = static_cast<uint8_t*>(malloc(100));
+    LOGI("ptr:%p", ptr);
+    for (int i = 0; i < 10; ++i) {
+        ptr[i] = i;
+    }
     free(ptr);
 }
 
 
 void run_qbdi() {
     auto instance = InstructionTracerManager::get_instance();
-    if (!instance->init((uintptr_t) &libc_call)) {
+    if (!instance->init((uintptr_t)&libc_call)) {
         LOGE("init qdbi fail");
     }
     instance->get_info_manager()->set_enable_to_logcat(true);
+    instance->get_info_manager()->set_memory_dump_to_file(true);
     if (!instance->run()) {
         LOGE("run attach fail");
     }
 }
 
 
-JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
-    JNIEnv *env;
-    if (vm->GetEnv((void **) &env, JNI_VERSION_1_6) != JNI_OK) {
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
+    JNIEnv* env;
+    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) {
         return JNI_ERR;
     }
     smjni::jni_provider::init(env);
@@ -62,7 +65,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_com_g2w_Itrace_trace_1test(JNIEnv *env, jclass clazz) {
+Java_com_com_g2w_Itrace_trace_1test(JNIEnv* env, jclass clazz) {
     auto instance = InstructionTracerManager::get_instance();
     if (!instance->init("libmtguard.so", 0x846B8)) {
         LOGE("init qdbi fail");
@@ -71,4 +74,9 @@ Java_com_com_g2w_Itrace_trace_1test(JNIEnv *env, jclass clazz) {
     instance->get_info_manager()->set_enable_to_file(true);
     instance->get_info_manager()->set_enable_to_logcat(true);
     instance->run_attach();
+}
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_com_g2w_Itrace_trace_1malloc(JNIEnv *env, jclass clazz) {
+    // TODO: implement trace_malloc()
 }

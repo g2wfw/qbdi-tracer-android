@@ -25,14 +25,16 @@
 
 #include "instruction_info_manager.h"
 
-void InstructionInfoManager::set_enable_to_logcat(bool enable) const
-{
+void InstructionInfoManager::set_enable_to_logcat(bool enable) const {
     this->logger->set_enable_to_logcat(enable);
 }
 
-void InstructionInfoManager::set_enable_to_file(bool enable) const
-{
+void InstructionInfoManager::set_enable_to_file(bool enable) const {
     this->logger->set_enable_to_file(enable);
+}
+
+void InstructionInfoManager::set_memory_dump_to_file(bool enable) const {
+    this->logger->set_memory_dump_to_file(enable);
 }
 
 inst_trace_info_t *InstructionInfoManager::alloc_inst_trace_info(uintptr_t pc) {
@@ -54,7 +56,7 @@ inst_trace_info_t *InstructionInfoManager::alloc_inst_trace_info(uintptr_t pc) {
     return cur_info;
 }
 
-inst_trace_info_t *InstructionInfoManager::get_current_inst_trace_info() {
+inst_trace_info_t *InstructionInfoManager::get_current_inst_trace_info() const {
     return this->cur_info;
 }
 
@@ -73,34 +75,32 @@ inst_trace_info_t *InstructionInfoManager::alloc_fun_call(uintptr_t pc) {
 }
 
 
-inst_trace_info_t *InstructionInfoManager::dispatch_fun_call_args(uintptr_t pc) {
+inst_trace_info_t *InstructionInfoManager::dispatch_fun_call_args(uintptr_t pc) const {
     auto jump_target_address = pc;
     cur_info->fun_call->fun_address = jump_target_address;
     this->dispatch_manager->dispatch_args(cur_info);
     return cur_info;
 }
 
-inst_trace_info_t *InstructionInfoManager::dispatch_fun_call_return(const QBDI::GPRState *state) {
+void InstructionInfoManager::dispatch_fun_call_return(const QBDI::GPRState *state) const {
     this->dispatch_manager->dispatch_ret(pre_info, state);
-    return pre_info;
 }
 
 void InstructionInfoManager::write_trace_info(const QBDI::InstAnalysis *instAnalysis,
-                                              std::vector<QBDI::MemoryAccess> &memoryAccesses) {
+                                              std::vector<QBDI::MemoryAccess> &memoryAccesses) const {
     if (this->pre_info != nullptr && this->pre_info->pc == instAnalysis->address) {
         this->logger->write_trace_info(pre_info, instAnalysis, memoryAccesses);
     }
     if (this->cur_info != nullptr && this->cur_info->pc == instAnalysis->address) {
         this->logger->write_trace_info(cur_info, instAnalysis, memoryAccesses);
     }
-
 }
 
-inst_trace_info_t *InstructionInfoManager::get_previous_inst_trace_info() {
+inst_trace_info_t *InstructionInfoManager::get_previous_inst_trace_info() const {
     return this->pre_info;
 }
 
-inst_trace_info_t *InstructionInfoManager::dispatch_fun_call_common_args(uintptr_t pc) {
+inst_trace_info_t *InstructionInfoManager::dispatch_fun_call_common_args(uintptr_t pc) const {
     auto jump_target_address = pc;
     cur_info->fun_call->fun_address = jump_target_address;
     cur_info->fun_call->call_module_name = this->module_name;
@@ -108,7 +108,7 @@ inst_trace_info_t *InstructionInfoManager::dispatch_fun_call_common_args(uintptr
     return cur_info;
 }
 
-bool InstructionInfoManager::add_common_reg_values(inst_trace_info_t *info) {
+void InstructionInfoManager::add_common_reg_values(inst_trace_info_t *info) {
     auto instCall = info->fun_call;
     auto state = info->pre_status.gpr_state;
 #ifdef __arm__
@@ -126,17 +126,10 @@ bool InstructionInfoManager::add_common_reg_values(inst_trace_info_t *info) {
     instCall->args.push_back(fmt::format("X6={:#x}", state.x6));
     instCall->args.push_back(fmt::format("X7={:#x}", state.x7));
 #endif
-    return true;
 }
 
 
-
-inst_trace_info_t *InstructionInfoManager::dispatch_fun_call_common_return(const QBDI::GPRState *state) {
-    add_common_return_value(state);
-    return pre_info;
-}
-
-bool InstructionInfoManager::add_common_return_value(const QBDI::GPRState *state) {
+void InstructionInfoManager::dispatch_fun_call_common_return(const QBDI::GPRState *state) const {
     auto instCall = pre_info->fun_call;
 #if __arm__
     instCall->ret_type = kUnknown;
@@ -145,13 +138,4 @@ bool InstructionInfoManager::add_common_return_value(const QBDI::GPRState *state
     instCall->ret_type = kUnknown;
     instCall->ret_value = fmt::format("ret={:#x}", state->x0);
 #endif
-    return true;
 }
-
-
-
-
-
-
-
-

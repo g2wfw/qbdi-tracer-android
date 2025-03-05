@@ -33,34 +33,27 @@
 #include "instruction_dispatch_manager.h"
 #include "logger_manager.h"
 
-class InstructionInfoManager
-{
+class InstructionInfoManager {
 public:
     InstructionInfoManager(std::string name, module_range_t module_base, QBDI::VM* vm)
         : vm(vm),
           module_name(
               std::move(name)),
           module_range(
-              module_base)
-    {
+              module_base) {
         this->dispatch_manager = InstructionDispatchManager::getInstance();
         this->logger = std::make_unique<LoggerManager>(module_name, module_base);
     };
 
-    ~InstructionInfoManager()
-    {
-        if (this->pre_info != nullptr)
-        {
-            if (this->pre_info->fun_call != nullptr)
-            {
+    ~InstructionInfoManager() {
+        if (this->pre_info != nullptr) {
+            if (this->pre_info->fun_call != nullptr) {
                 delete this->pre_info->fun_call;
             }
             delete this->pre_info;
         }
-        if (this->cur_info != nullptr)
-        {
-            if (this->cur_info->fun_call != nullptr)
-            {
+        if (this->cur_info != nullptr) {
+            if (this->cur_info->fun_call != nullptr) {
                 delete this->cur_info->fun_call;
             }
             delete this->cur_info;
@@ -69,31 +62,30 @@ public:
 
     inst_trace_info_t* alloc_inst_trace_info(uintptr_t pc);
 
-    inst_trace_info_t* get_current_inst_trace_info();
+    inst_trace_info_t* get_current_inst_trace_info() const;
 
-    inst_trace_info_t* get_previous_inst_trace_info();
+    inst_trace_info_t* get_previous_inst_trace_info() const;
 
     inst_trace_info_t* alloc_fun_call(uintptr_t pc);
 
-    inst_trace_info_t* dispatch_fun_call_args(uintptr_t pc);
+    inst_trace_info_t* dispatch_fun_call_args(uintptr_t pc) const;
 
-    inst_trace_info_t* dispatch_fun_call_common_args(uintptr_t pc);
+    inst_trace_info_t* dispatch_fun_call_common_args(uintptr_t pc) const;
 
-    inst_trace_info_t* dispatch_fun_call_return(const QBDI::GPRState* state);
+    void dispatch_fun_call_return(const QBDI::GPRState* state) const;
 
-    inst_trace_info_t* dispatch_fun_call_common_return(const QBDI::GPRState* state);
+    void dispatch_fun_call_common_return(const QBDI::GPRState* state) const;
 
     void write_trace_info(const QBDI::InstAnalysis* instAnalysis,
-                          std::vector<QBDI::MemoryAccess>& memoryAccesses);
+                          std::vector<QBDI::MemoryAccess>& memoryAccesses) const;
 
     void set_enable_to_logcat(bool enable) const;
 
     void set_enable_to_file(bool enable) const;
+    void set_memory_dump_to_file(bool enable) const;
 
 private:
-    bool add_common_reg_values(inst_trace_info_t* info);
-
-    bool add_common_return_value(const QBDI::GPRState* state);
+    static void add_common_reg_values(inst_trace_info_t* info);
 
 private:
     QBDI::VM* vm = nullptr;

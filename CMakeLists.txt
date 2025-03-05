@@ -16,7 +16,7 @@ if (NOT DEFINED CMAKE_ANDROID_NDK)
     if (DEFINED target_abi)
         init_android_build(${target_abi} 24 "clang" "c++_static")
     else ()
-        init_android_build("armeabi-v7a" 24 "clang" "c++_static")
+        init_android_build("arm64-v8a" 24 "clang" "c++_static")
     endif ()
 endif ()
 
@@ -80,6 +80,8 @@ add_library(qbdi_tracer SHARED
         core/dispatch/dispatch_libz.h
         core/memory_manager.cpp
         core/memory_manager.h
+        core/hex_dump.cpp
+        core/hex_dump.h
 )
 
 target_link_libraries(qbdi_tracer PRIVATE ${QBDI_LIB_PATH} ${FRIDA_GUM_LIB_PATH} smjni log )
