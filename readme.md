@@ -9,7 +9,9 @@ in functionality but faster than Frida.Stalker.
 
 * Supports SVC instruction tracing, and can print the parameters of SVC instructions.
 * Supports JNIEnv call tracing, and can print the parameters and return values of JNIEnv calls.
+  ![env](./image/env.png)
 * Supports libc function tracing, and can print the parameters and return values of libc function calls.
+  ![env](./image/libc.png)
 
 ## Build Environment
 

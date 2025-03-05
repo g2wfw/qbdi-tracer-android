@@ -68,9 +68,9 @@ public:
 
     inst_trace_info_t* alloc_fun_call(uintptr_t pc);
 
-    inst_trace_info_t* dispatch_fun_call_args(uintptr_t pc) const;
+    void dispatch_fun_call_args(uintptr_t pc) const;
 
-    inst_trace_info_t* dispatch_fun_call_common_args(uintptr_t pc) const;
+    void dispatch_fun_call_common_args(uintptr_t pc) const;
 
     void dispatch_fun_call_return(const QBDI::GPRState* state) const;
 

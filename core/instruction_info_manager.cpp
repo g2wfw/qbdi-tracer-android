@@ -37,7 +37,7 @@ void InstructionInfoManager::set_memory_dump_to_file(bool enable) const {
     this->logger->set_memory_dump_to_file(enable);
 }
 
-inst_trace_info_t *InstructionInfoManager::alloc_inst_trace_info(uintptr_t pc) {
+inst_trace_info_t* InstructionInfoManager::alloc_inst_trace_info(uintptr_t pc) {
     if (cur_info == nullptr) {
         this->cur_info = new inst_trace_info_t();
         this->cur_info->pc = pc;
@@ -56,11 +56,11 @@ inst_trace_info_t *InstructionInfoManager::alloc_inst_trace_info(uintptr_t pc) {
     return cur_info;
 }
 
-inst_trace_info_t *InstructionInfoManager::get_current_inst_trace_info() const {
+inst_trace_info_t* InstructionInfoManager::get_current_inst_trace_info() const {
     return this->cur_info;
 }
 
-inst_trace_info_t *InstructionInfoManager::alloc_fun_call(uintptr_t pc) {
+inst_trace_info_t* InstructionInfoManager::alloc_fun_call(uintptr_t pc) {
     if (cur_info == nullptr) {
         alloc_inst_trace_info(pc);
     }
@@ -75,19 +75,18 @@ inst_trace_info_t *InstructionInfoManager::alloc_fun_call(uintptr_t pc) {
 }
 
 
-inst_trace_info_t *InstructionInfoManager::dispatch_fun_call_args(uintptr_t pc) const {
+void InstructionInfoManager::dispatch_fun_call_args(uintptr_t pc) const {
     auto jump_target_address = pc;
     cur_info->fun_call->fun_address = jump_target_address;
     this->dispatch_manager->dispatch_args(cur_info);
-    return cur_info;
 }
 
-void InstructionInfoManager::dispatch_fun_call_return(const QBDI::GPRState *state) const {
+void InstructionInfoManager::dispatch_fun_call_return(const QBDI::GPRState* state) const {
     this->dispatch_manager->dispatch_ret(pre_info, state);
 }
 
-void InstructionInfoManager::write_trace_info(const QBDI::InstAnalysis *instAnalysis,
-                                              std::vector<QBDI::MemoryAccess> &memoryAccesses) const {
+void InstructionInfoManager::write_trace_info(const QBDI::InstAnalysis* instAnalysis,
+                                              std::vector<QBDI::MemoryAccess>& memoryAccesses) const {
     if (this->pre_info != nullptr && this->pre_info->pc == instAnalysis->address) {
         this->logger->write_trace_info(pre_info, instAnalysis, memoryAccesses);
     }
@@ -96,19 +95,18 @@ void InstructionInfoManager::write_trace_info(const QBDI::InstAnalysis *instAnal
     }
 }
 
-inst_trace_info_t *InstructionInfoManager::get_previous_inst_trace_info() const {
+inst_trace_info_t* InstructionInfoManager::get_previous_inst_trace_info() const {
     return this->pre_info;
 }
 
-inst_trace_info_t *InstructionInfoManager::dispatch_fun_call_common_args(uintptr_t pc) const {
+void InstructionInfoManager::dispatch_fun_call_common_args(uintptr_t pc) const {
     auto jump_target_address = pc;
     cur_info->fun_call->fun_address = jump_target_address;
     cur_info->fun_call->call_module_name = this->module_name;
     add_common_reg_values(cur_info);
-    return cur_info;
 }
 
-void InstructionInfoManager::add_common_reg_values(inst_trace_info_t *info) {
+void InstructionInfoManager::add_common_reg_values(inst_trace_info_t* info) {
     auto instCall = info->fun_call;
     auto state = info->pre_status.gpr_state;
 #ifdef __arm__
@@ -129,7 +127,7 @@ void InstructionInfoManager::add_common_reg_values(inst_trace_info_t *info) {
 }
 
 
-void InstructionInfoManager::dispatch_fun_call_common_return(const QBDI::GPRState *state) const {
+void InstructionInfoManager::dispatch_fun_call_common_return(const QBDI::GPRState* state) const {
     auto instCall = pre_info->fun_call;
 #if __arm__
     instCall->ret_type = kUnknown;

@@ -10,7 +10,7 @@
 
 static std::unordered_map<uintptr_t, std::string> env_fun_table;
 
-DispatchJNIEnv *DispatchJNIEnv::get_instance() {
+DispatchJNIEnv* DispatchJNIEnv::get_instance() {
     static DispatchJNIEnv dispatchJniEnv;
     return &dispatchJniEnv;
 }
@@ -27,16 +27,17 @@ DispatchJNIEnv::DispatchJNIEnv() {
 }
 
 
-inline bool starts_with(const std::string &str, const std::string &prefix) {
+inline bool starts_with(const std::string& str, const std::string& prefix) {
     return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
 }
 
-inline bool ends_with(const std::string &str, const std::string &suffix) {
-    if (suffix.size() > str.size()) return false;
+inline bool ends_with(const std::string& str, const std::string& suffix) {
+    if (suffix.size() > str.size())
+        return false;
     return std::equal(suffix.rbegin(), suffix.rend(), str.rbegin());
 }
 
-void DispatchJNIEnv::dispatch_env(std::string name, inst_trace_info_t *trace_info) {
+void DispatchJNIEnv::dispatch_env(std::string name, inst_trace_info_t* trace_info) {
     auto env = smjni::jni_provider::get_jni();
     auto env_ptr = get_arg_register_value(&trace_info->pre_status, 0);
     auto arg0 = get_arg_register_value(&trace_info->pre_status, 1);
@@ -46,278 +47,278 @@ void DispatchJNIEnv::dispatch_env(std::string name, inst_trace_info_t *trace_inf
     trace_info->fun_call->args.push_back(fmt::format("env={:#x}", env_ptr));
 
     static const std::unordered_map<std::string, std::function<void()>> handlers = {
-            {"FindClass",               [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("name={}", read_string_from_address(arg0)));
-            }},
-            {"FromReflectedMethod",     [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("method={}", get_reflected_method_info(env, (jobject) arg0)));
-            }},
-            {"FromReflectedField",      [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("field={}", get_reflected_field_info(env, (jobject) arg0)));
-            }},
-            {"ToReflectedMethod",       [&]() {
-                trace_info->fun_call->args.push_back(fmt::format("methodID={}",
+        {"FindClass", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("name={}", read_string_from_address(arg0)));
+        }},
+        {"FromReflectedMethod", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("method={}", get_reflected_method_info(env, (jobject)arg0)));
+        }},
+        {"FromReflectedField", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("field={}", get_reflected_field_info(env, (jobject)arg0)));
+        }},
+        {"ToReflectedMethod", [&]() {
+            trace_info->fun_call->args.push_back(fmt::format("methodID={}",
+                                                             get_jni_method_signature(env,
+                                                                                      (jmethodID)arg1)));
+        }},
+        {"ToReflectedField", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("fieldID={}", get_jni_field_signature(env, (jfieldID)arg1)));
+        }},
+        {"GetSuperclass", [&]() {
+            trace_info->fun_call->args.push_back(fmt::format("clazz={}",
+                                                             get_jni_class_or_java_class_name(
+                                                                 env, (jclass)arg0)));
+        }},
+        {"IsAssignableFrom", [&]() {
+            trace_info->fun_call->args.push_back(fmt::format("clazz1={}",
+                                                             get_jni_class_or_java_class_name(
+                                                                 env, (jclass)arg0)));
+            trace_info->fun_call->args.push_back(fmt::format("clazz2={}",
+                                                             get_jni_class_or_java_class_name(
+                                                                 env, (jclass)arg1)));
+        }},
+        {"ThrowNew", [&]() {
+            trace_info->fun_call->args.push_back(fmt::format("clazz={}",
+                                                             get_jni_class_or_java_class_name(
+                                                                 env, (jclass)arg0)));
+            trace_info->fun_call->args.push_back(
+                fmt::format("message={}", read_string_from_address(arg1)));
+        }},
+        {"FatalError", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("message={}", read_string_from_address(arg0)));
+        }},
+        {"PushLocalFrame", [&]() {
+            trace_info->fun_call->args.push_back(fmt::format("capacity={:#x}", arg0));
+        }},
+        {"PopLocalFrame", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("object={}", get_jni_jobject_name(env, (jobject)arg0)));
+        }},
+        {"NewGlobalRef", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("object={}", get_jni_jobject_name(env, (jobject)arg0)));
+        }},
+        {"DeleteGlobalRef", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("object={}", get_jni_jobject_name(env, (jobject)arg0)));
+        }},
+        {"DeleteLocalRef", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("object={}", get_jni_jobject_name(env, (jclass)arg0)));
+        }},
+        {"IsSameObject", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("ref1={}", get_jni_jobject_name(env, (jobject)arg0)));
+            trace_info->fun_call->args.push_back(
+                fmt::format("ref2={}", get_jni_jobject_name(env, (jobject)arg1)));
+        }},
+        {"NewLocalRef", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("object={}", get_jni_jobject_name(env, (jobject)arg0)));
+        }},
+        {"EnsureLocalCapacity", [&]() {
+            trace_info->fun_call->args.push_back(fmt::format("capacity={:#x}", arg0));
+        }},
+        {"AllocObject", [&]() {
+            trace_info->fun_call->args.push_back(fmt::format("clazz={}",
+                                                             get_jni_class_or_java_class_name(
+                                                                 env, (jclass)arg0)));
+        }},
+        {"NewObject", [&]() {
+            trace_info->fun_call->args.push_back(fmt::format("clazz={}",
+                                                             get_jni_class_or_java_class_name(
+                                                                 env, (jclass)arg0)));
+            trace_info->fun_call->args.push_back(
+                fmt::format("method={}", get_jni_method_signature(env, (jmethodID)arg1)));
+        }},
+        {"NewObjectV", [&]() {
+            if (env->ExceptionCheck()) {
+                env->ExceptionDescribe();
+            }
+            trace_info->fun_call->args.push_back(fmt::format("clazz={}",
+                                                             get_jni_class_or_java_class_name(
+                                                                 env, (jclass)arg0)));
+            trace_info->fun_call->args.push_back(
+                fmt::format("method={}", get_jni_method_signature(env, (jmethodID)arg1)));
+            if (env->ExceptionCheck()) {
+                env->ExceptionDescribe();
+            }
+        }},
+        {"NewObjectA", [&]() {
+            trace_info->fun_call->args.push_back(fmt::format("clazz={}",
+                                                             get_jni_class_or_java_class_name(
+                                                                 env, (jclass)arg0)));
+            trace_info->fun_call->args.push_back(
+                fmt::format("method={}", get_jni_method_signature(env, (jmethodID)arg1)));
+        }},
+        {"GetObjectClass", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("object={}", get_jni_jobject_name(env, (jobject)arg0)));
+        }},
+        {"IsInstanceOf", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("object={}", get_jni_jobject_name(env, (jobject)arg0)));
+            trace_info->fun_call->args.push_back(fmt::format("clazz={}",
+                                                             get_jni_class_or_java_class_name(
+                                                                 env, (jclass)arg1)));
+        }},
+        {"GetMethodID", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("object={}", get_jni_jobject_name(env, (jobject)arg0)));
+            trace_info->fun_call->args.push_back(
+                fmt::format("name={}", read_string_from_address(arg1)));
+            trace_info->fun_call->args.push_back(
+                fmt::format("sig={}", read_string_from_address(arg2)));
+        }},
+        {"Call", [&]() {
+            if (starts_with(name, "CallStatic")) {
+                trace_info->fun_call->args.push_back(fmt::format("class={}",
+                                                                 get_jni_class_or_java_class_name(
+                                                                     env, (jclass)arg0)));
+                trace_info->fun_call->args.push_back(fmt::format("method={}",
                                                                  get_jni_method_signature(env,
-                                                                                          (jmethodID) arg1)));
-            }},
-            {"ToReflectedField",        [&]() {
+                                                                                          (jmethodID)arg1)));
+            } else {
                 trace_info->fun_call->args.push_back(
-                        fmt::format("fieldID={}", get_jni_field_signature(env, (jfieldID) arg1)));
-            }},
-            {"GetSuperclass",           [&]() {
-                trace_info->fun_call->args.push_back(fmt::format("clazz={}",
-                                                                 get_jni_class_or_java_class_name(
-                                                                         env, (jclass) arg0)));
-            }},
-            {"IsAssignableFrom",        [&]() {
-                trace_info->fun_call->args.push_back(fmt::format("clazz1={}",
-                                                                 get_jni_class_or_java_class_name(
-                                                                         env, (jclass) arg0)));
-                trace_info->fun_call->args.push_back(fmt::format("clazz2={}",
-                                                                 get_jni_class_or_java_class_name(
-                                                                         env, (jclass) arg1)));
-            }},
-            {"ThrowNew",                [&]() {
-                trace_info->fun_call->args.push_back(fmt::format("clazz={}",
-                                                                 get_jni_class_or_java_class_name(
-                                                                         env, (jclass) arg0)));
+                    fmt::format("object={}", get_jni_jobject_name(env, (jobject)arg0)));
+                trace_info->fun_call->args.push_back(fmt::format("method={}",
+                                                                 get_jni_method_signature(env,
+                                                                                          (jmethodID)arg1)));
+            }
+        }},
+        {"GetField", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("object={}", get_jni_jobject_name(env, (jobject)arg0)));
+            trace_info->fun_call->args.push_back(
+                fmt::format("field={}", get_jni_field_signature(env, (jfieldID)arg1)));
+        }},
+        {"GetFieldID", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("name={}", read_string_from_address(arg1)));
+            trace_info->fun_call->args.push_back(
+                fmt::format("sig={}", read_string_from_address(arg2)));
+        }},
+        {"SetField", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("object={}", get_jni_jobject_name(env, (jobject)arg0)));
+            trace_info->fun_call->args.push_back(
+                fmt::format("field={}", get_jni_field_signature(env, (jfieldID)arg1)));
+            if (name == "SetStaticObjectField" || name == "SetObjectField") {
                 trace_info->fun_call->args.push_back(
-                        fmt::format("message={}", read_string_from_address(arg1)));
-            }},
-            {"FatalError",              [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("message={}", read_string_from_address(arg0)));
-            }},
-            {"PushLocalFrame",          [&]() {
-                trace_info->fun_call->args.push_back(fmt::format("capacity={:#x}", arg0));
-            }},
-            {"PopLocalFrame",           [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("object={}", get_jni_jobject_name(env, (jobject) arg0)));
-            }},
-            {"NewGlobalRef",            [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("object={}", get_jni_jobject_name(env, (jobject) arg0)));
-            }},
-            {"DeleteGlobalRef",         [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("object={}", get_jni_jobject_name(env, (jobject) arg0)));
-            }},
-            {"DeleteLocalRef",          [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("object={}", get_jni_jobject_name(env, (jclass) arg0)));
-            }},
-            {"IsSameObject",            [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("ref1={}", get_jni_jobject_name(env, (jobject) arg0)));
-                trace_info->fun_call->args.push_back(
-                        fmt::format("ref2={}", get_jni_jobject_name(env, (jobject) arg1)));
-            }},
-            {"NewLocalRef",             [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("object={}", get_jni_jobject_name(env, (jobject) arg0)));
-            }},
-            {"EnsureLocalCapacity",     [&]() {
-                trace_info->fun_call->args.push_back(fmt::format("capacity={:#x}", arg0));
-            }},
-            {"AllocObject",             [&]() {
-                trace_info->fun_call->args.push_back(fmt::format("clazz={}",
-                                                                 get_jni_class_or_java_class_name(
-                                                                         env, (jclass) arg0)));
-            }},
-            {"NewObject",               [&]() {
-                trace_info->fun_call->args.push_back(fmt::format("clazz={}",
-                                                                 get_jni_class_or_java_class_name(
-                                                                         env, (jclass) arg0)));
-                trace_info->fun_call->args.push_back(
-                        fmt::format("method={}", get_jni_method_signature(env, (jmethodID) arg1)));
-            }},
-            {"NewObjectV",              [&]() {
-                if (env->ExceptionCheck()) {
-                    env->ExceptionDescribe();
-                }
-                trace_info->fun_call->args.push_back(fmt::format("clazz={}",
-                                                                 get_jni_class_or_java_class_name(
-                                                                         env, (jclass) arg0)));
-                trace_info->fun_call->args.push_back(
-                        fmt::format("method={}", get_jni_method_signature(env, (jmethodID) arg1)));
-                if (env->ExceptionCheck()) {
-                    env->ExceptionDescribe();
-                }
-            }},
-            {"NewObjectA",              [&]() {
-                trace_info->fun_call->args.push_back(fmt::format("clazz={}",
-                                                                 get_jni_class_or_java_class_name(
-                                                                         env, (jclass) arg0)));
-                trace_info->fun_call->args.push_back(
-                        fmt::format("method={}", get_jni_method_signature(env, (jmethodID) arg1)));
-            }},
-            {"GetObjectClass",          [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("object={}", get_jni_jobject_name(env, (jobject) arg0)));
-            }},
-            {"IsInstanceOf",            [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("object={}", get_jni_jobject_name(env, (jobject) arg0)));
-                trace_info->fun_call->args.push_back(fmt::format("clazz={}",
-                                                                 get_jni_class_or_java_class_name(
-                                                                         env, (jclass) arg1)));
-            }},
-            {"GetMethodID",             [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("object={}", get_jni_jobject_name(env, (jobject) arg0)));
-                trace_info->fun_call->args.push_back(
-                        fmt::format("name={}", read_string_from_address(arg1)));
-                trace_info->fun_call->args.push_back(
-                        fmt::format("sig={}", read_string_from_address(arg2)));
-            }},
-            {"Call",                    [&]() {
-                if (starts_with(name, "CallStatic")) {
-                    trace_info->fun_call->args.push_back(fmt::format("class={}",
-                                                                     get_jni_class_or_java_class_name(
-                                                                             env, (jclass) arg0)));
-                    trace_info->fun_call->args.push_back(fmt::format("method={}",
-                                                                     get_jni_method_signature(env,
-                                                                                              (jmethodID) arg1)));
-                } else {
-                    trace_info->fun_call->args.push_back(
-                            fmt::format("object={}", get_jni_jobject_name(env, (jobject) arg0)));
-                    trace_info->fun_call->args.push_back(fmt::format("method={}",
-                                                                     get_jni_method_signature(env,
-                                                                                              (jmethodID) arg1)));
-                }
-            }},
-            {"GetField",                [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("object={}", get_jni_jobject_name(env, (jobject) arg0)));
-                trace_info->fun_call->args.push_back(
-                        fmt::format("field={}", get_jni_field_signature(env, (jfieldID) arg1)));
-            }},
-            {"GetFieldID",              [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("name={}", read_string_from_address(arg1)));
-                trace_info->fun_call->args.push_back(
-                        fmt::format("sig={}", read_string_from_address(arg2)));
-            }},
-            {"SetField",                [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("object={}", get_jni_jobject_name(env, (jobject) arg0)));
-                trace_info->fun_call->args.push_back(
-                        fmt::format("field={}", get_jni_field_signature(env, (jfieldID) arg1)));
-                if (name == "SetStaticObjectField" || name == "SetObjectField") {
-                    trace_info->fun_call->args.push_back(
-                            fmt::format("value={}", get_jni_object_to_string(env, (jobject) arg2)));
-                } else {
-                    trace_info->fun_call->args.push_back(fmt::format("value={:#x}", arg2));
-                }
-            }},
-            {"NewStringUTF",            [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("string={}", read_string_from_address(arg0)));
-            }},
-            {"GetStringUTFLength",      [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("string={}", jstring_to_string(env, (jstring) arg0)));
-            }},
-            {"GetStringUTFChars",       [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("string={}", jstring_to_string(env, (jstring) arg0)));
-            }},
-            {"ReleaseStringUTFChars",   [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("string={}", jstring_to_string(env, (jstring) arg0)));
-            }},
-            {"GetArrayLength",          [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("array={}:{:#x}", get_jni_jobject_name(env, (jobject) arg0),
-                                    arg0));
-            }},
-            {"NewObjectArray",          [&]() {
-                trace_info->fun_call->args.push_back(fmt::format("length={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("elementClass={}",
-                                                                 get_jni_class_or_java_class_name(
-                                                                         env, (jclass) arg1)));
-            }},
-            {"NewArray",                [&]() {
-                trace_info->fun_call->args.push_back(fmt::format("length={:#x}", arg0));
-            }},
-            {"GetObjectArrayElement",   [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("array={}:{:#x}", get_jni_jobject_name(env, (jobject) arg0),
-                                    arg0));
-                trace_info->fun_call->args.push_back(fmt::format("index={:#x}", arg1));
-            }},
-            {"SetObjectArrayElement",   [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("array={}:{:#x}", get_jni_jobject_name(env, (jobject) arg0),
-                                    arg0));
-                trace_info->fun_call->args.push_back(fmt::format("index={:#x}", arg1));
-                trace_info->fun_call->args.push_back(
-                        fmt::format("value={}", get_jni_object_to_string(env, (jobject) arg2)));
-            }},
-            {"GetArrayElements",        [&]() {
-                trace_info->fun_call->args.push_back(fmt::format("array={:#x}", arg0));
-            }},
-            {"ReleaseArrayElements",    [&]() {
-                trace_info->fun_call->args.push_back(fmt::format("array={:#x}", arg0));
-            }},
-            {"GetArrayRegion",          [&]() {
-                trace_info->fun_call->args.push_back(fmt::format("array={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("start={:#x}", arg1));
-                trace_info->fun_call->args.push_back(fmt::format("len={:#x}", arg2));
-                trace_info->fun_call->args.push_back(fmt::format("buf={:#x}", arg3));
-            }},
-            {"SetRegion",               [&]() {
-                trace_info->fun_call->args.push_back(fmt::format("array={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("start={:#x}", arg1));
-                trace_info->fun_call->args.push_back(fmt::format("len={:#x}", arg2));
-                trace_info->fun_call->args.push_back(fmt::format("buf={:#x}", arg3));
-            }},
-            {"RegisterNatives",         [&]() {
-                trace_info->fun_call->args.push_back(fmt::format("class={}",
-                                                                 get_jni_class_or_java_class_name(
-                                                                         env, (jclass) arg0)));
-                JNINativeMethod *method = (JNINativeMethod *) arg1;
-                auto size = arg2;
-                std::vector<std::string> methods;
-                for (int i = 0; i < size; ++i) {
-                    methods.emplace_back(fmt::format("{}{}{}", method[i].name, method[i].signature,
-                                                     method[i].fnPtr));
-                }
-                auto str = join(methods, ",");
-                trace_info->fun_call->args.push_back(fmt::format("methods={}", str));
-                trace_info->fun_call->args.push_back(fmt::format("nMethods={:#x}", arg2));
-            }},
-            {"UnregisterNatives",       [&]() {
-                trace_info->fun_call->args.push_back(fmt::format("class={}",
-                                                                 get_jni_class_or_java_class_name(
-                                                                         env, (jclass) arg0)));
-            }},
-            {"Monitor",                 [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("object={}", get_jni_jobject_name(env, (jobject) arg0)));
-            }},
-            {"NewWeakGlobalRef",        [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("object={}", get_jni_jobject_name(env, (jobject) arg0)));
-            }},
-            {"DeleteWeakGlobalRef",     [&]() {
-                trace_info->fun_call->args.push_back(
-                        fmt::format("object={}", get_jni_jobject_name(env, (jobject) arg0)));
-            }},
-            {"NewDirectByteBuffer",     [&]() {
-                trace_info->fun_call->args.push_back(fmt::format("address={:#x}", arg0));
-                trace_info->fun_call->args.push_back(fmt::format("capacity={:#x}", arg1));
-            }},
-            {"GetDirectBufferAddress",  [&]() {
-                trace_info->fun_call->args.push_back(fmt::format("buf={:#x}", arg0));
-            }},
-            {"GetDirectBufferCapacity", [&]() {
-                trace_info->fun_call->args.push_back(fmt::format("buf={:#x}", arg0));
-            }},
+                    fmt::format("value={}", get_jni_object_to_string(env, (jobject)arg2)));
+            } else {
+                trace_info->fun_call->args.push_back(fmt::format("value={:#x}", arg2));
+            }
+        }},
+        {"NewStringUTF", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("string={}", read_string_from_address(arg0)));
+        }},
+        {"GetStringUTFLength", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("string={}", jstring_to_string(env, (jstring)arg0)));
+        }},
+        {"GetStringUTFChars", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("string={}", jstring_to_string(env, (jstring)arg0)));
+        }},
+        {"ReleaseStringUTFChars", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("string={}", jstring_to_string(env, (jstring)arg0)));
+        }},
+        {"GetArrayLength", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("array={}:{:#x}", get_jni_jobject_name(env, (jobject)arg0),
+                            arg0));
+        }},
+        {"NewObjectArray", [&]() {
+            trace_info->fun_call->args.push_back(fmt::format("length={:#x}", arg0));
+            trace_info->fun_call->args.push_back(fmt::format("elementClass={}",
+                                                             get_jni_class_or_java_class_name(
+                                                                 env, (jclass)arg1)));
+        }},
+        {"NewArray", [&]() {
+            trace_info->fun_call->args.push_back(fmt::format("length={:#x}", arg0));
+        }},
+        {"GetObjectArrayElement", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("array={}:{:#x}", get_jni_jobject_name(env, (jobject)arg0),
+                            arg0));
+            trace_info->fun_call->args.push_back(fmt::format("index={:#x}", arg1));
+        }},
+        {"SetObjectArrayElement", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("array={}:{:#x}", get_jni_jobject_name(env, (jobject)arg0),
+                            arg0));
+            trace_info->fun_call->args.push_back(fmt::format("index={:#x}", arg1));
+            trace_info->fun_call->args.push_back(
+                fmt::format("value={}", get_jni_object_to_string(env, (jobject)arg2)));
+        }},
+        {"GetArrayElements", [&]() {
+            trace_info->fun_call->args.push_back(fmt::format("array={:#x}", arg0));
+        }},
+        {"ReleaseArrayElements", [&]() {
+            trace_info->fun_call->args.push_back(fmt::format("array={:#x}", arg0));
+        }},
+        {"GetArrayRegion", [&]() {
+            trace_info->fun_call->args.push_back(fmt::format("array={:#x}", arg0));
+            trace_info->fun_call->args.push_back(fmt::format("start={:#x}", arg1));
+            trace_info->fun_call->args.push_back(fmt::format("len={:#x}", arg2));
+            trace_info->fun_call->args.push_back(fmt::format("buf={:#x}", arg3));
+        }},
+        {"SetRegion", [&]() {
+            trace_info->fun_call->args.push_back(fmt::format("array={:#x}", arg0));
+            trace_info->fun_call->args.push_back(fmt::format("start={:#x}", arg1));
+            trace_info->fun_call->args.push_back(fmt::format("len={:#x}", arg2));
+            trace_info->fun_call->args.push_back(fmt::format("buf={:#x}", arg3));
+        }},
+        {"RegisterNatives", [&]() {
+            trace_info->fun_call->args.push_back(fmt::format("class={}",
+                                                             get_jni_class_or_java_class_name(
+                                                                 env, (jclass)arg0)));
+            JNINativeMethod* method = (JNINativeMethod*)arg1;
+            auto size = arg2;
+            std::vector<std::string> methods;
+            for (int i = 0; i < size; ++i) {
+                methods.emplace_back(fmt::format("{}{}{}", method[i].name, method[i].signature,
+                                                 method[i].fnPtr));
+            }
+            auto str = join(methods, ",");
+            trace_info->fun_call->args.push_back(fmt::format("methods={}", str));
+            trace_info->fun_call->args.push_back(fmt::format("nMethods={:#x}", arg2));
+        }},
+        {"UnregisterNatives", [&]() {
+            trace_info->fun_call->args.push_back(fmt::format("class={}",
+                                                             get_jni_class_or_java_class_name(
+                                                                 env, (jclass)arg0)));
+        }},
+        {"Monitor", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("object={}", get_jni_jobject_name(env, (jobject)arg0)));
+        }},
+        {"NewWeakGlobalRef", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("object={}", get_jni_jobject_name(env, (jobject)arg0)));
+        }},
+        {"DeleteWeakGlobalRef", [&]() {
+            trace_info->fun_call->args.push_back(
+                fmt::format("object={}", get_jni_jobject_name(env, (jobject)arg0)));
+        }},
+        {"NewDirectByteBuffer", [&]() {
+            trace_info->fun_call->args.push_back(fmt::format("address={:#x}", arg0));
+            trace_info->fun_call->args.push_back(fmt::format("capacity={:#x}", arg1));
+        }},
+        {"GetDirectBufferAddress", [&]() {
+            trace_info->fun_call->args.push_back(fmt::format("buf={:#x}", arg0));
+        }},
+        {"GetDirectBufferCapacity", [&]() {
+            trace_info->fun_call->args.push_back(fmt::format("buf={:#x}", arg0));
+        }},
     };
     auto it = handlers.find(name);
     if (it != handlers.end()) {
@@ -348,7 +349,7 @@ void DispatchJNIEnv::dispatch_env(std::string name, inst_trace_info_t *trace_inf
 
 void DispatchJNIEnv::init_env_fun_table() {
     auto env = smjni::jni_provider::get_jni();
-    const auto *fun_table = reinterpret_cast<const uintptr_t *>(env->functions);
+    const auto* fun_table = reinterpret_cast<const uintptr_t*>(env->functions);
     JNI_TABLE_FUN(GetVersion);
     JNI_TABLE_FUN(DefineClass);
     JNI_TABLE_FUN(FindClass);
@@ -578,14 +579,13 @@ void DispatchJNIEnv::init_env_fun_table() {
     JNI_TABLE_FUN(GetDirectBufferAddress);
     JNI_TABLE_FUN(GetDirectBufferCapacity);
     JNI_TABLE_FUN(GetObjectRefType);
-
-
 }
 
-bool DispatchJNIEnv::dispatch_args(inst_trace_info_t *info) {
+bool DispatchJNIEnv::dispatch_args(inst_trace_info_t* info) {
     if (!is_module_address(info->fun_call->fun_address)) {
         return false;
     }
+    info->fun_call->call_module_name = "libart.so";
     auto env_fun_find = env_fun_table.find(info->fun_call->fun_address);
     if (env_fun_find != env_fun_table.end()) {
         auto name = env_fun_find->second;
@@ -596,7 +596,7 @@ bool DispatchJNIEnv::dispatch_args(inst_trace_info_t *info) {
     return true;
 }
 
-bool DispatchJNIEnv::dispatch_ret(inst_trace_info_t *info, const QBDI::GPRState *ret_status) {
+bool DispatchJNIEnv::dispatch_ret(inst_trace_info_t* info, const QBDI::GPRState* ret_status) {
     if (!is_module_address(info->fun_call->fun_address)) {
         return false;
     }
@@ -605,10 +605,10 @@ bool DispatchJNIEnv::dispatch_ret(inst_trace_info_t *info, const QBDI::GPRState 
         auto env = smjni::jni_provider::get_jni();
         info->fun_call->ret_value = (fmt::format("ret class={}:{:#x}",
                                                  get_jni_class_or_java_class_name(env,
-                                                                                  (jclass) ret_value),
+                                                                                  (jclass)ret_value),
                                                  ret_value));
     } else {
-        add_common_return_value(info,ret_status);
+        add_common_return_value(info, ret_status);
     }
     return true;
 }

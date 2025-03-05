@@ -59,7 +59,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     }
     smjni::jni_provider::init(env);
     LOGI("init qdbi trace .....");
-    run_qbdi();
+    //run_qbdi();
     return JNI_VERSION_1_6;
 }
 
@@ -73,6 +73,7 @@ Java_com_com_g2w_Itrace_trace_1test(JNIEnv* env, jclass clazz) {
     }
     instance->get_info_manager()->set_enable_to_file(true);
     instance->get_info_manager()->set_enable_to_logcat(true);
+    instance->get_info_manager()->set_memory_dump_to_file(true);
     instance->run_attach();
 }
 extern "C"

@@ -264,24 +264,24 @@ void LoggerManager::format_access_info(std::string &result,
             if (ma.type == QBDI::MemoryAccessType::MEMORY_READ) {
                 if (ma.size == 1 && isprint((int) ma.value)) {
                     ma_info.push_back(
-                            fmt::format("read memory:{:#x}=>{:#x} {} block:{:#x} offset:{:#x}",
+                            fmt::format("read memory:{:#x}=>{:#x} {} memory block index:{:#x} offset:{:#x}",
                                         ma.accessAddress, ma.value,
                                         (char) ma.value, memory_index, offset));
                 } else {
                     ma_info.push_back(
-                            fmt::format("read memory:{:#x}=>{:#x}  block:{:#x} offset:{:#x}",
+                            fmt::format("read memory:{:#x}=>{:#x}  memory block index:{:#x} offset:{:#x}",
                                         ma.accessAddress, ma.value, memory_index,
                                         offset));
                 }
             } else {
                 if (ma.size == 1 && isprint((int) ma.value)) {
                     ma_info.push_back(
-                            fmt::format("write memory:{:#x}=>{:#x} {} block:{:#x} offset:{:#x}",
+                            fmt::format("write memory:{:#x}=>{:#x} {} memory block index:{:#x} offset:{:#x}",
                                         ma.accessAddress, ma.value,
                                         (char) ma.value, memory_index, offset));
                 } else {
                     ma_info.push_back(
-                            fmt::format("write memory:{:#x}=>{:#x} block:{:#x} offset:{:#x}",
+                            fmt::format("write memory:{:#x}=>{:#x} memory block index:{:#x} offset:{:#x}",
                                         ma.accessAddress, ma.value, memory_index,
                                         offset));
                 }
