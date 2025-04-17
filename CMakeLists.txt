@@ -1,4 +1,6 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.22)
+cmake_policy(SET CMP0135 NEW)
+set(CMAKE_BUILD_TYPE Debug)
 if (NOT DEFINED CMAKE_ANDROID_NDK)
     if (EXISTS ${CMAKE_CURRENT_LIST_DIR}/cmake)
         include(cmake/android.cmake)
@@ -16,72 +18,83 @@ if (NOT DEFINED CMAKE_ANDROID_NDK)
     if (DEFINED target_abi)
         init_android_build(${target_abi} 24 "clang" "c++_static")
     else ()
-        init_android_build("arm64-v8a" 24 "clang" "c++_static")
+        init_android_build("armeabi-v7a" 24 "clang" "c++_static")
     endif ()
 endif ()
-
-project(qbdi_tracer)
+project(reverse_tools)
 if (NOT DEFINED CMAKE_ANDROID_NDK)
     config_toolchain_file()
 endif ()
-set(CMAKE_CXX_STANDARD 17)
-
-
 include(FetchContent)
 if (ANDROID_ABI STREQUAL "arm64-v8a")
     FetchContent_Declare(
             qdbi
             URL "file://${CMAKE_CURRENT_LIST_DIR}/prebuild/arm64/QBDI-0.11.1.arm64.zip"  #
     )
-    FetchContent_Declare(
-            gum
-            URL "file://${CMAKE_CURRENT_LIST_DIR}/prebuild/arm64/frida-gum-devkit-16.6.6-android-arm64.tar.xz"
-    )
-
 elseif (ANDROID_ABI STREQUAL "armeabi-v7a")
     FetchContent_Declare(
             qdbi
             URL "file://${CMAKE_CURRENT_LIST_DIR}/prebuild/arm/QBDI-0.11.1.arm.zip"
     )
-    FetchContent_Declare(
-            gum
-            URL "file://${CMAKE_CURRENT_LIST_DIR}/prebuild/arm/frida-gum-devkit-16.6.6-android-arm.tar.xz"
-    )
 endif ()
 FetchContent_MakeAvailable(qdbi)
-FetchContent_MakeAvailable(gum)
+
 set(QBDI_LIB_PATH "${qdbi_SOURCE_DIR}/lib/libQBDI.a")
 set(QBDI_INCLUDE_DIR "${qdbi_SOURCE_DIR}/include")
 
-set(FRIDA_GUM_LIB_PATH "${gum_SOURCE_DIR}/libfrida-gum.a")
-set(FRIDA_GUM_INCLUDE_DIR "${gum_SOURCE_DIR}/")
-include_directories(${QBDI_INCLUDE_DIR} ${FRIDA_GUM_INCLUDE_DIR} ./)
+
+include_directories(${QBDI_INCLUDE_DIR} ./)
+
+
+set(CMAKE_CXX_STANDARD 17)
 add_subdirectory(external)
-add_library(qbdi_tracer SHARED
-        core/instruction_tracer_manager.cpp
-        core/instruction_tracer_manager.h
-        core/instruction_call_back.cpp
-        core/common.h
-        core/instruction_register_utils.cpp
-        core/instruction_register_utils.h
-        core/instruction_info_manager.cpp
-        core/instruction_info_manager.h
-        core/instruction_dispatch_manager.cpp
-        core/instruction_dispatch_manager.h
-        core/dispatch/dispatch_base.cpp
-        core/dispatch/dispatch_jni_env.cpp
-        core/dispatch/dispatch_libc.cpp
-        core/dispatch/jni_internal.cpp
-        core/logger_manager.cpp
-        core/logger_manager.h
-        test/trace_test.cpp
-        core/dispatch/dispatch_syscall.cpp
-        core/dispatch/dispatch_libz.cpp
-        core/dispatch/dispatch_libz.h
-        core/memory_manager.cpp
-        core/memory_manager.h
-        core/hex_dump.cpp
-        core/hex_dump.h
+include_directories(./)
+set(core_source
+        core/memory.cpp
+        core/library.cpp
+        core/linker.cpp
+        core/linker.h
+        core/hook_manager.cpp
+        core/back_trace_manager.cpp
+        core/back_trace_manager.h
+        core/memory_scan.cpp
+        core/memory_scan.h
+        core/java_helper.cpp
+        core/java_helper.h
 )
 
-target_link_libraries(qbdi_tracer PRIVATE ${QBDI_LIB_PATH} ${FRIDA_GUM_LIB_PATH} smjni log )
+set(trace_src
+        trace/instruction_tracer_manager.cpp
+        trace/instruction_tracer_manager.h
+        trace/instruction_call_back.cpp
+        trace/common.h
+        trace/instruction_register_utils.cpp
+        trace/instruction_register_utils.h
+        trace/instruction_info_manager.cpp
+        trace/instruction_info_manager.h
+        trace/instruction_dispatch_manager.cpp
+        trace/instruction_dispatch_manager.h
+        trace/dispatch/dispatch_base.cpp
+        trace/dispatch/dispatch_jni_env.cpp
+        trace/dispatch/dispatch_libc.cpp
+        trace/dispatch/jni_internal.cpp
+        trace/logger_manager.cpp
+        trace/logger_manager.h
+        trace/dispatch/dispatch_syscall.cpp
+        trace/dispatch/dispatch_libz.cpp
+        trace/dispatch/dispatch_libz.h
+        trace/memory_manager.cpp
+        trace/memory_manager.h
+        trace/hex_dump.cpp
+        trace/hex_dump.h
+)
+
+add_library(qbdi-tracer SHARED ${core_source} ${hook_src} ${trace_src})
+target_link_libraries(qbdi-tracer PUBLIC ${QBDI_LIB_PATH} stl::core smjni dobby_static xdl xHook log breaktrace)
+
+
+add_library(qbdi-tracer-static STATIC ${core_source} ${hook_src} ${trace_src})
+target_link_libraries(qbdi-tracer-static PUBLIC ${QBDI_LIB_PATH} stl::core smjni dobby_static xdl xHook log breaktrace)
+
+
+add_subdirectory(examples)

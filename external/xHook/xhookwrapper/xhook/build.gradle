@@ -1,0 +1,48 @@
+apply plugin: 'com.android.library'
+apply plugin: 'maven'
+
+def version = "1.2.0"
+
+android {
+    compileSdkVersion 29
+    buildToolsVersion '29.0.2'
+    defaultConfig {
+        minSdkVersion 14
+        targetSdkVersion 29
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_6
+        targetCompatibility JavaVersion.VERSION_1_6
+    }
+    buildTypes {
+        debug {
+            minifyEnabled false
+            useProguard false
+        }
+        release {
+            minifyEnabled false
+            useProguard false
+        }
+    }
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['libs']
+        }
+    }
+    uploadArchives {
+        repositories {
+            mavenDeployer {
+                repository(url: "") {
+                    authentication(userName: "", password: "")
+                }
+                pom.version = "$version"
+                pom.artifactId = "xhook"
+                pom.groupId = "com.qiyi.xhook"
+            }
+        }
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+}

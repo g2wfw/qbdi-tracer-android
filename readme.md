@@ -27,5 +27,8 @@ in functionality but faster than Frida.Stalker.
 ## Credits
 
 * [QBDI](https://github.com/QBDI/QBDI)
-* [frida-gum](https://github.com/frida/frida-gum)
+* [xHook](https://github.com/iqiyi/xHook)
+* [Xdl](https://github.com/hexhacking/xDL)
+* [Dobby](https://github.com/jmpews/Dobby)
+
 * [SimpleJNI](https://github.com/gershnik/SimpleJNI)
